@@ -6,6 +6,9 @@ You will be working in **Claude Cowork** (the desktop app). Every step below is 
 terminal command or a block of text you paste into Claude. Anything in a grey box is meant
 to be copied exactly.
 
+If you haven't used terminal commands before, it's not as scary as it sounds.
+Everything is laid out for you here, just follow instructions slowly, with lots of copy/paste.
+
 ---
 
 ## PART 1 — ONE-TIME SETUP
