@@ -112,7 +112,16 @@ Two folders, two things to drop in. Names must match.
 
 ### Source captures → `Source Files/<module name>/`
 
-Capture the course module as PDFs (GoFullPage or similar). One **folder per module**, named
+**Note:** Text files are cheap. PDFs without text layers and images are VERY expensive.
+    Utilize as many Text Files as you can to conserve token usage.
+    30+ pages of screenshots without a text layer will be 50-100% of your
+    LLM usage limits alone.
+
+If you are using text documents, upload them directly (doc, ppt, txt, etc.)
+If you are using screenshots, capture the source files as individual PDFs (GoFullPage or similar).
+    Capture every page. Do **not** merge the PDFs with an online tool — it destroys the text
+    layer and uploads your course material to a third party.
+One **folder per module**, named
 however you want the module named everywhere else.
 
 ```
@@ -120,14 +129,9 @@ Source Files/
   Airway Anatomy and Management/
     screencapture-...-18_34_13.pdf
     screencapture-...-18_35_20.pdf
+    doc15-...-22.doc
+    ppt790-...-1.ppt
 ```
-
-**Before you capture: expand every accordion on the page.** Any collapsed "References" or
-`+` panel gets captured as a header and nothing else. Nothing downstream can recover text
-that was never in the file. This is the single easiest way to silently lose content.
-
-Capture every page. Do **not** merge the PDFs with an online tool — it destroys the text
-layer and uploads your course material to a third party.
 
 ### Deck → `Anki Decks/<module name>.apkg`
 
