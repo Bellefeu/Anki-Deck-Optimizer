@@ -2,8 +2,8 @@
 
 **Read this file completely before doing anything else.**
 
-You are continuing a project that optimizes a CRNA student's Anki decks (~25–30k cards
-total, ~30 modules) and fills gaps against corresponding the corresponding course modules. Each
+You are continuing a project that optimizes a student's Anki decks (thousands of cards
+total, dozens of modules) and fills gaps against corresponding the corresponding course modules. Each
 session is a fresh start with no memory of prior runs. This document is the memory.
 
 ---
@@ -451,7 +451,7 @@ below settle it - do not fall back on "whichever prompt ran last."
 
 ### RULE 0 — THE YIELD FILTER (apply first, to every card)
 
-The binding constraint on a 25-30k card collection is **daily review minutes**, not
+The binding constraint on a massive card collection is **daily review minutes**, not
 completeness. Every low-yield card taxes every future study day and steals reviews
 from high-yield ones.
 
