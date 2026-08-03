@@ -1,6 +1,6 @@
 # Anki Deck Optimization — starter kit
 
-A pipeline for rebuilding CRNA study decks against a course module: it restructures
+A pipeline for rebuilding study decks against a course module: it restructures
 cards that test badly, fills gaps the module covers and the deck misses, verifies the
 factual claims, and refuses to ship a deck that contradicts itself.
 
