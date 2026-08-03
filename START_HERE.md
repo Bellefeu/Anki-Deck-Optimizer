@@ -164,7 +164,7 @@ Anki Decks/
 - Source folder but no deck → **creation mode**, building a deck from scratch. Read
   `HANDOFF_REFERENCE.md` §1e first.
 
-Stage as many modules as you like before starting.
+Stage **as many modules as you would like** before starting! 
 
 ---
 
