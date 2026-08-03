@@ -1,5 +1,8 @@
 # Anki Deck Optimization — starter kit
 
+**New here? Read [`START_HERE.md`](START_HERE.md).** It is a stepwise walkthrough with
+every command and every prompt you need to copy, in order.
+
 A pipeline for rebuilding study decks against a course module: it restructures
 cards that test badly, fills gaps the module covers and the deck misses, verifies the
 factual claims, and refuses to ship a deck that contradicts itself.
@@ -7,9 +10,6 @@ factual claims, and refuses to ship a deck that contradicts itself.
 It is meant to be driven by an AI agent. You hand the agent a prompt file; the scripts
 do everything that must be deterministic — database surgery, validation gates, the audit
 trail — and the agent does the editorial judgement the scripts cannot.
-
-**New here? Read [`START_HERE.md`](START_HERE.md).** It is a stepwise walkthrough with
-every command and every prompt you need to copy, in order.
 
 **Impatient?** `python3 scripts/bootstrap.py`
 
