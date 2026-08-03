@@ -17,9 +17,8 @@ Everything is laid out for you here, just follow instructions slowly, with lots 
 
 Clone or download the repo. Anywhere is fine — Desktop, Documents, a Dropbox folder.
 
-Q: How do I download this "repo", and what is a "repo"?
-A: Repository, the term for all GitHub projects. 
-- If you are reading this on GitHub, click the green Code button at the top right, then click Download ZIP, and extract the folder. Save it anywhere on your computer, somewhere you know where it is.
+- Q: How do I download this "repo", and what is a "repo"?
+- A: Repository, the term for all GitHub projects. If you are reading this on GitHub, click the green Code button at the top right, then click Download ZIP, and extract the folder. Save it anywhere on your computer, somewhere you know where it is.
 
 **One rule: it must be on your actual hard drive, not a cloud-only folder.** The pipeline
 uses SQLite, and SQLite cannot write to a Google Drive / iCloud / OneDrive mount — every
