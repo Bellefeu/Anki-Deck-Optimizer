@@ -29,8 +29,8 @@ STATE = os.path.join(HERE, "project_state.json")
 WORK  = os.path.join(HERE, "work")
 
 # Regenerable in one command from the source PDF - safe to delete.
-DISPOSABLE_DIRS  = ["apex/pages", "apex/strips", "_build", "apex/figs", "io_figs"]
-DISPOSABLE_FILES = ["apex/manifest.json"]          # resume checkpoint, useless once done
+DISPOSABLE_DIRS  = ["source/pages", "source/strips", "_build", "source/figs", "io_figs"]
+DISPOSABLE_FILES = ["source/manifest.json"]          # resume checkpoint, useless once done
 
 # The audit trail. Small, irreplaceable, never deleted.
 KEEP = {"ops.json", "fixes.json", "new_cards.json", "meta.json",
@@ -131,7 +131,7 @@ def do_purge(root, go, argv):
         p = os.path.join(root, sub)
         if os.path.isdir(p) and sub not in KNOWN_NONMODULE and sub.lower() not in verified:
             if any(f.endswith((".json", ".apkg")) for f in os.listdir(p)) or \
-               os.path.isdir(os.path.join(p, "apex")):
+               os.path.isdir(os.path.join(p, "source")):
                 orphans.append(sub)
     if orphans:
         print(f"    !! {len(orphans)} scratch folder(s) with no verified module behind them:")
@@ -282,7 +282,7 @@ def main():
             except OSError as e:
                 print(f"    could not remove {p}: {e}")
     print(f"\n  removed {freed} item(s), reclaimed ~{total/1e6:.1f} MB")
-    print("  Audit trail intact. Page images regenerate with extract_apex.py if ever needed.")
+    print("  Audit trail intact. Page images regenerate with extract_source.py if ever needed.")
     return 0
 
 

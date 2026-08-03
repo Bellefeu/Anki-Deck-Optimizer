@@ -43,7 +43,7 @@ the build - the note type must survive. `build_deck.py` prints
   format - a newly created deck must meet the gold standard on its first build, not
   after a later cleanup pass.
 
-Since there is no Apex module, creation runs `mode: "optimize-only"` for queue
+Since there is no source module, creation runs `mode: "optimize-only"` for queue
 purposes: pass 3 is replaced by extraction from the lecture source.
 
 ---
@@ -59,7 +59,7 @@ input folders**:
 Old Anki Decks and Files/
   <Module>/
     Anki Deck/   <the original .apkg>
-    Files/       the Apex PDF, or every capture from its folder
+    Files/       the source capture, or every capture from its folder
 ```
 
 ```bash
@@ -69,7 +69,7 @@ python3 archive_inputs.py --module "<Module>" --decks "Anki Decks" \
 ```
 
 `verify_deck.py --pass` runs this automatically. Paths come from `ANKI_DECK_DIR`,
-`SOURCE_DIR` and `ARCHIVE_DIR`, defaulting to the names above. (`APEX_PDF_DIR` still works; it is the pre-rename spelling.)
+`SOURCE_DIR` and `ARCHIVE_DIR`, defaulting to the names above. 
 
 **Why moving, not copying.** It preserves the pre-optimization originals, and it makes one
 specific accident impossible: a finished deck left in `Anki Decks/` will eventually be
@@ -281,16 +281,16 @@ python3 cleanup.py --yes              # delete
 python3 cleanup.py --yes --all        # include unverified (prompts first)
 ```
 
-**Copy the extracted text into `COMPLETED/<module>/audit/apex/`** before cleaning:
+**Copy the extracted text into `COMPLETED/<module>/audit/source/`** before cleaning:
 `content.txt` or `content_ocr.txt`, `extract_report.json`, `manifest.json`. Roughly 90 KB,
 and it is the only surviving record of what the module's source actually said - everything
-else in `apex/` regenerates, but only if the source PDF still exists. Cheap insurance.
+else in `source/` regenerates, but only if the source PDF still exists. Cheap insurance.
 
 | Deleted (regenerable) | Kept (audit trail) |
 |---|---|
-| `apex/pages/`, `apex/strips/` | `ops.json`, `new_cards.json`, `meta.json` |
+| `source/pages/`, `source/strips/` | `ops.json`, `new_cards.json`, `meta.json` |
 | `_build/` unpacked databases | `changelog.json`, `progress.json` |
-| `apex/manifest.json` checkpoint | `extract_report.json`, extracted text |
+| `source/manifest.json` checkpoint | `extract_report.json`, extracted text |
 | local copies of source PDFs/decks | |
 
 **Gated on verification.** Only modules with `status: "verified"` are cleaned by default.
@@ -414,9 +414,9 @@ finishes quickly.
 
 ---
 
-## 6. APEX MODULES — CAPTURE, OCR AND THE COVERAGE GATE
+## 6. SOURCE CAPTURES — OCR AND THE COVERAGE GATE
 
-**Every Apex PDF is 100% images with no text layer.** The user captures every page
+**Every source capture is 100% images with no text layer.** The user captures every page
 with GoFullPage, which paints the DOM to a canvas via html2canvas and wraps it in
 jsPDF; `pdftotext` returns zero words. Confirmed across all 74 PDFs in the working
 folders - every one reports Producer `jsPDF 4.0.0` and a zero-word text layer. The
@@ -459,7 +459,7 @@ OCR-derived number — nerve root ranges, volumes, dermatome counts, needle gaug
 settings, mg/kg doses — goes in the NOTES.docx verification section for the user to
 eyeball. Do not silently trust them.
 
-**Apex figures are copyrighted IP.** They may appear in the NOTES.docx as cropped visual
+**Source figures are copyrighted IP.** They may appear in the NOTES.docx as cropped visual
 references only (so the user knows which view to recreate). They must **never** go into a
 card. When a topic genuinely needs an image — pattern recognition on sonoanatomy, spatial
 coverage maps — write an IO card request in NOTES.docx with the cropped figure beneath it,
@@ -502,7 +502,7 @@ assume a fixed filename is current.
 
 **Large binaries probably will NOT transfer through the connector.** `download_file_content`
 returns base64 into context, which is not viable for a 50 MB image-only PDF, and
-`read_file_content` returns nothing useful for a PDF with no text layer (which every Apex
+`read_file_content` returns nothing useful for a PDF with no text layer (which every the source
 module is). If the module PDF cannot be pulled from Drive, it must be attached to the session
 directly — or, in Cowork on the desktop, read from the local Google Drive sync folder as an
 ordinary file path, which bypasses the connector entirely. **Test this before relying on it

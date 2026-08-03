@@ -2,7 +2,7 @@
 
 One **folder per module**, named exactly how you want the module named everywhere
 downstream. Inside it, the PDF captures for that module — as many as it took, in any
-order; `extract_apex.py` sorts them naturally.
+order; `extract_source.py` sorts them naturally.
 
 ```
 Source Files/

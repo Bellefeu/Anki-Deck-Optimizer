@@ -43,7 +43,7 @@ the build - the note type must survive. `build_deck.py` prints
   format - a newly created deck must meet the gold standard on its first build, not
   after a later cleanup pass.
 
-Since there is no Apex module, creation runs `mode: "optimize-only"` for queue
+Since there is no source module, creation runs `mode: "optimize-only"` for queue
 purposes: pass 3 is replaced by extraction from the lecture source.
 
 ---
@@ -59,7 +59,7 @@ input folders**:
 Old Anki Decks and Files/
   <Module>/
     Anki Deck/   <the original .apkg>
-    Files/       the Apex PDF, or every capture from its folder
+    Files/       the source capture, or every capture from its folder
 ```
 
 ```bash
@@ -69,7 +69,7 @@ python3 archive_inputs.py --module "<Module>" --decks "Anki Decks" \
 ```
 
 `verify_deck.py --pass` runs this automatically. Paths come from `ANKI_DECK_DIR`,
-`SOURCE_DIR` and `ARCHIVE_DIR`, defaulting to the names above. (`APEX_PDF_DIR` still works; it is the pre-rename spelling.)
+`SOURCE_DIR` and `ARCHIVE_DIR`, defaulting to the names above. 
 
 **Why moving, not copying.** It preserves the pre-optimization originals, and it makes one
 specific accident impossible: a finished deck left in `Anki Decks/` will eventually be
@@ -281,16 +281,16 @@ python3 cleanup.py --yes              # delete
 python3 cleanup.py --yes --all        # include unverified (prompts first)
 ```
 
-**Copy the extracted text into `COMPLETED/<module>/audit/apex/`** before cleaning:
+**Copy the extracted text into `COMPLETED/<module>/audit/source/`** before cleaning:
 `content.txt` or `content_ocr.txt`, `extract_report.json`, `manifest.json`. Roughly 90 KB,
 and it is the only surviving record of what the module's source actually said - everything
-else in `apex/` regenerates, but only if the source PDF still exists. Cheap insurance.
+else in `source/` regenerates, but only if the source PDF still exists. Cheap insurance.
 
 | Deleted (regenerable) | Kept (audit trail) |
 |---|---|
-| `apex/pages/`, `apex/strips/` | `ops.json`, `new_cards.json`, `meta.json` |
+| `source/pages/`, `source/strips/` | `ops.json`, `new_cards.json`, `meta.json` |
 | `_build/` unpacked databases | `changelog.json`, `progress.json` |
-| `apex/manifest.json` checkpoint | `extract_report.json`, extracted text |
+| `source/manifest.json` checkpoint | `extract_report.json`, extracted text |
 | local copies of source PDFs/decks | |
 
 **Gated on verification.** Only modules with `status: "verified"` are cleaned by default.
@@ -414,9 +414,9 @@ finishes quickly.
 
 ---
 
-## 6. APEX MODULES — CAPTURE, OCR AND THE COVERAGE GATE
+## 6. SOURCE CAPTURES — OCR AND THE COVERAGE GATE
 
-**Every Apex PDF is 100% images with no text layer.** The user captures every page
+**Every source capture is 100% images with no text layer.** The user captures every page
 with GoFullPage, which paints the DOM to a canvas via html2canvas and wraps it in
 jsPDF; `pdftotext` returns zero words. Confirmed across all 74 PDFs in the working
 folders - every one reports Producer `jsPDF 4.0.0` and a zero-word text layer. The
@@ -459,7 +459,7 @@ OCR-derived number — nerve root ranges, volumes, dermatome counts, needle gaug
 settings, mg/kg doses — goes in the NOTES.docx verification section for the user to
 eyeball. Do not silently trust them.
 
-**Apex figures are copyrighted IP.** They may appear in the NOTES.docx as cropped visual
+**Source figures are copyrighted IP.** They may appear in the NOTES.docx as cropped visual
 references only (so the user knows which view to recreate). They must **never** go into a
 card. When a topic genuinely needs an image — pattern recognition on sonoanatomy, spatial
 coverage maps — write an IO card request in NOTES.docx with the cropped figure beneath it,
@@ -502,7 +502,7 @@ assume a fixed filename is current.
 
 **Large binaries probably will NOT transfer through the connector.** `download_file_content`
 returns base64 into context, which is not viable for a 50 MB image-only PDF, and
-`read_file_content` returns nothing useful for a PDF with no text layer (which every Apex
+`read_file_content` returns nothing useful for a PDF with no text layer (which every the source
 module is). If the module PDF cannot be pulled from Drive, it must be attached to the session
 directly — or, in Cowork on the desktop, read from the local Google Drive sync folder as an
 ordinary file path, which bypasses the connector entirely. **Test this before relying on it
@@ -529,13 +529,13 @@ for an unattended scheduled run.**
 - **PROMPT_verify.md and build_deck.py disagree on the patch input path** (2026-07-30) — The prompt says write _work/<module>/patch_ops.json; build_deck.py reads work/<module>/. A session following the prompt literally gets 'Nothing to do: no ops and no cards found'.
   - *Mitigation:* Fixed 2026-07-30: the prompts were wrong, not the scripts. Every executable (build_deck.py WORKROOT, next_action.py WORK, cleanup.py, verify_deck.py, selftest.py, build_notes.js) resolves 'work/' next to the scripts, so all five PROMPT_*.md files and handoff_template.md now say work/<module>/ too. The only surviving '_work' references are '<path>/_work' cleanup examples, which point at the legacy Drive scratch root and are correct. handoff_template.md 4e explains the distinction.
 - **Two silent infinite loops in the unattended orchestrator, neither covered by any test** (2026-07-30) — next_action.py resolved COMPLETED/ as HERE/COMPLETED, but every scheduled run copies the scripts to a fresh scratch dir where that does not exist, so has_verify_report() always returned False and VERIFY was re-issued on an already-verified module every run, forever. Separately, build_queue.py excluded only 'verified' modules from the queue; since a finished module rests at 'built-unverified' until the user runs --pass, refreshing the queue each run would have re-queued it and rebuilt it from scratch, discarding the verification. Neither could be seen from outside: both look like the pipeline working.
-  - *Mitigation:* next_action.py now resolves COMPLETED as env COMPLETED_DIR -> paths.completed in project_state.json -> HERE/COMPLETED, re-validates that the chosen path exists, and exits 2 with an explanation rather than guessing when none resolve. It also refuses to issue BUILD for a queued deck whose .apkg is missing. build_queue.py now excludes every tracked module regardless of status, resolves its input dirs as argv -> env -> recorded -> default, and records project_root/apex_pdf_dir/deck_dir/completed for later runs. selftest.py sections 6 and 7 cover the whole decision table and the multi-deck loop - there was no coverage of next_action.py or build_queue.py at all before, which is how both shipped.
-- **--pass marked a module verified but silently failed to archive its inputs** (2026-07-30) — verify_deck.py --pass invoked archive_inputs.py with ANKI_DECK_DIR/APEX_PDF_DIR/ARCHIVE_DIR defaulting to relative paths ('Anki Decks', ...). A --pass runs from a local scratch copy where those resolve to nothing, and the call used check=False inside a bare try/except, so it printed nothing and moved nothing. The original deck stayed in Anki Decks/ - which archive_inputs.py exists specifically to prevent, because a later run can then take an already-optimized deck as its source and gap-fill it twice. Separately, --pass called update_handoff.regenerate() before archiving, and render_status raised KeyError on a module record missing an optional field, aborting the pass after the status flip but before the file moves.
+  - *Mitigation:* next_action.py now resolves COMPLETED as env COMPLETED_DIR -> paths.completed in project_state.json -> HERE/COMPLETED, re-validates that the chosen path exists, and exits 2 with an explanation rather than guessing when none resolve. It also refuses to issue BUILD for a queued deck whose .apkg is missing. build_queue.py now excludes every tracked module regardless of status, resolves its input dirs as argv -> env -> recorded -> default, and records project_root/source_dir/deck_dir/completed for later runs. selftest.py sections 6 and 7 cover the whole decision table and the multi-deck loop - there was no coverage of next_action.py or build_queue.py at all before, which is how both shipped.
+- **--pass marked a module verified but silently failed to archive its inputs** (2026-07-30) — verify_deck.py --pass invoked archive_inputs.py with ANKI_DECK_DIR/SOURCE_DIR/ARCHIVE_DIR defaulting to relative paths ('Anki Decks', ...). A --pass runs from a local scratch copy where those resolve to nothing, and the call used check=False inside a bare try/except, so it printed nothing and moved nothing. The original deck stayed in Anki Decks/ - which archive_inputs.py exists specifically to prevent, because a later run can then take an already-optimized deck as its source and gap-fill it twice. Separately, --pass called update_handoff.regenerate() before archiving, and render_status raised KeyError on a module record missing an optional field, aborting the pass after the status flip but before the file moves.
   - *Mitigation:* verify_deck.py --pass now resolves the three folders as env -> paths recorded in project_state.json -> conventional default, validates the deck folder exists, and after archiving re-checks that the deck actually left the input folder, reporting loudly if it did not. build_queue.py records paths.archive_dir alongside the others. update_handoff.render_status uses .get throughout, and --pass wraps regenerate() so a handoff-rendering failure can never block the file moves. selftest.py section 8 covers the whole path end to end.
 
 ### Verified environment facts
 
-- Apex PDFs are 100% image, zero text layer - pdftotext returns 0 words
+- source captures are 100% image, zero text layer - pdftotext returns 0 words
 - sqlite3 CLI not installed; use Python sqlite3 module
 - xxd not installed; use od
 - zstandard requires: pip install zstandard --break-system-packages

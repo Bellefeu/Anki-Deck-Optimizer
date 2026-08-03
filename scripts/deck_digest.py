@@ -121,7 +121,8 @@ def flags_for(text, extra):
         f.append("unit-inside-cloze")                   # Rule 3
     if text.count("{{c") and not targets:
         f.append("malformed-cloze")
-    if re.search(r"\bapex\b|per the module|the lecture|as taught in", bare_text + extra, re.I):
+    if re.search(r"per the module|the module states|the lecture|as taught in|"
+                 r"according to the (?:course|source|module)", bare_text + extra, re.I):
         f.append("RULE-8-attribution")                  # Rule 8, absolute
     if re.search(r"\b(always|never|exactly|precisely|consistently)\b", bare_text, re.I):
         f.append("epistemic-register")                  # Rule 12

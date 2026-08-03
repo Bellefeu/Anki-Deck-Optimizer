@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inspect Apex module source and extract its content the best way available.
+"""Inspect course module source and extract its content the best way available.
 
 Accepts EITHER a single PDF or a FOLDER of PDFs. If you captured a module as
 several GoFullPage exports (one per sub-module), just put them in a folder named
@@ -50,7 +50,7 @@ was elided. Same dpi as the OCR raster - **no resolution is ever traded away** -
 same reading order, one image per page as before.
 
 Usage:
-    python3 extract_apex.py "<module.pdf | module_folder>" [output_dir]
+    python3 extract_source.py "<module.pdf | module_folder>" [output_dir]
 
 Env knobs (all optional):
     OCR_DPI=150        rasterization dpi; also the dpi of every pixel you read
@@ -522,7 +522,7 @@ def plan_is_stale(plan):
 
 def main():
     if len(sys.argv) < 2:
-        sys.exit("Usage: python3 extract_apex.py <module.pdf | module_folder> [outdir]")
+        sys.exit("Usage: python3 extract_source.py <module.pdf | module_folder> [outdir]")
     src = sys.argv[1]
     if not os.path.exists(src): sys.exit(f"Not found: {src}")
     outdir = sys.argv[2] if len(sys.argv) > 2 else os.path.splitext(src)[0] + "_extracted"

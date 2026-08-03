@@ -29,7 +29,7 @@ python3 build_queue.py "<Drive>/Source Files" "<Drive>/Anki Decks"
 ```
 
 This is safe to repeat and is what makes the pipeline self-starting. It pairs each deck
-with its Apex module by filename, queues decks with no module as `optimize-only`, and
+with its source module by filename, queues decks with no module as `optimize-only`, and
 **skips every module already tracked in `project_state.json`, whatever its status** — so a
 deck that is built, verified, or awaiting your `--pass` is never rebuilt. It also re-records
 the absolute paths for *this* environment, which matters because a later run may reach the
@@ -78,7 +78,7 @@ unattended run has no one to notice it reading 6k tokens of scheduling notes on 
 turn of a three-hour job.
 
 **Check `unattended_ink_px == 0`** in `extract_report.json` after STEP 2 of a BUILD.
-If it is not 0, `extract_apex.py` has already exited non-zero — re-run it with
+If it is not 0, `extract_source.py` has already exited non-zero — re-run it with
 `COVERAGE=page`, note it in the report, and continue. Do not proceed on a failed
 coverage proof.
 
@@ -126,7 +126,7 @@ You may run out of usage partway through. Leave state resumable at every point:
   ```
   `next_action.py` sees an incomplete `progress.json` and resumes that module before
   starting anything new. Set `"complete": true` when the passes are done.
-- `extract_apex.py` already checkpoints per page. If it is killed, just re-run it.
+- `extract_source.py` already checkpoints per page. If it is killed, just re-run it.
 - **Never leave a half-written `ops.json` without a matching `progress.json`.** A later run
   cannot tell the difference between "finished" and "died partway" without it.
 
@@ -135,7 +135,7 @@ You may run out of usage partway through. Leave state resumable at every point:
 Copy to Drive:
 - deliverables → `COMPLETED/<module>/`
 - audit trail → `COMPLETED/<module>/audit/` (`ops.json`, `new_cards.json`, `meta.json`,
-  `changelog.json`, `extract_report.json`, and `apex/content*.txt`)
+  `changelog.json`, `extract_report.json`, and `source/content*.txt`)
 - regenerated `HANDOFF.md` and `project_state.json` → `scripts/`
 
 Then release the lock — **do this even if the phase failed**, or the next run is blocked

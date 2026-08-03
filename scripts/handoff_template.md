@@ -3,7 +3,7 @@
 **Read this file completely before doing anything else.**
 
 You are continuing a project that optimizes a CRNA student's Anki decks (~25–30k cards
-total, ~30 modules) and fills gaps against corresponding Apex Anesthesia modules. Each
+total, ~30 modules) and fills gaps against corresponding the corresponding course modules. Each
 session is a fresh start with no memory of prior runs. This document is the memory.
 
 ---
@@ -15,7 +15,7 @@ If you read nothing else, read these five:
 1. **Section 0** — do the visual read FIRST, before any other work.
 2. **Section 3b** — the editorial rubric. This is the actual job. Nine rules with
    an operational test each. Passes 1 and 2 mean applying all of them to every card.
-   **Rule 8 is absolute: a card never names Apex or any other source.**
+   **Rule 8 is absolute: a card never names the source, by any name.**
 3. **Section 5** — two validation bugs that shipped once already. Do not repeat them.
 4. **Section 2** — a new note without a matching `cards` row imports as nothing,
    silently.
@@ -29,7 +29,7 @@ the toolchain is broken before you waste a run finding out.
 
 ## 0. FIRST ACTION OF EVERY SESSION — DO NOT SKIP
 
-**Read the Apex PDF visually, page by page, in order, starting at page 1, BEFORE any
+**Read the source capture visually, page by page, in order, starting at page 1, BEFORE any
 other work.**
 
 Image rendering has degraded mid-session before: pages rendered correctly early on, then
@@ -61,7 +61,7 @@ Two related mount behaviours:
 - **Cloud-only files are invisible to bash.** A folder can look empty while Drive shows
   files in it. Reading a file with the file tools forces materialization; after that
   bash sees it. Mark folders "available offline" to avoid this.
-- **Long-running processes get killed by the sandbox.** `extract_apex.py` checkpoints
+- **Long-running processes get killed by the sandbox.** `extract_source.py` checkpoints
   after every page for exactly this reason - if it dies, re-run it and it resumes.
 
 ---
@@ -141,16 +141,16 @@ the result. 29 assertions, ~10 seconds. If it fails, fix that before touching re
 
 **Step 1 — build the queue** (only when new files have been added):
 ```bash
-python3 build_queue.py "<APEX PDF folder>" "<Anki Decks folder>"
+python3 build_queue.py "<Source Files folder>" "<Anki Decks folder>"
 ```
 Pairs PDFs to decks by normalized filename (tolerates spaces/underscores/hyphens/case),
 reads each deck's real `deck_id` straight out of the `.apkg`, and writes the result to
 `pending_modules` in `project_state.json`. This touches the `.apkg` but costs no visual
 budget, so it is safe to run before the visual read.
 
-**A deck with no matching Apex PDF is queued anyway, in `mode: "optimize-only"`.** Pass 3
+**A deck with no matching source capture is queued anyway, in `mode: "optimize-only"`.** Pass 3
 (gap-fill) is skipped; passes 1, 2 and 4 run in full. This matters because many decks are
-lecture-derived with no Apex counterpart, and those tend to be the OLDEST and worst decks -
+lecture-derived with no the source counterpart, and those tend to be the OLDEST and worst decks -
 exactly the ones most needing restructuring. Never skip a deck just because it has no
 module. A PDF with no deck is still reported as an error.
 
@@ -208,7 +208,7 @@ round-trip verifies, pops the queue, and regenerates this handoff. One command.
 Write `work/<module>/notes_config.json`:
 
 ```json
-{ "source_label": "Truncal APEX", "source_pages": 30, "ocr_used": true,
+{ "source_label": "Truncal source", "source_pages": 30, "ocr_used": true,
   "cards_before": 150, "cards_after": 228,
   "verify_items": [["Nerve root ranges", "C5-C7 ...", "why this is OCR-risky"]],
   "io": [{ "id":"IO-01", "file":"IO-01_x.png", "page":12, "priority":"HIGH",
@@ -230,10 +230,10 @@ though no prompt invokes it directly.
 
 ---
 
-## 1c. READING THE APEX MODULE — RUN THE EXTRACTOR
+## 1c. READING THE SOURCE MODULE — RUN THE EXTRACTOR
 
 ```bash
-python3 extract_apex.py "<module.pdf OR module_folder>" "work/<module>/apex"
+python3 extract_source.py "<module.pdf OR module_folder>" "work/<module>/source"
 ```
 
 **Accepts a folder of PDFs.** If a module was captured as several GoFullPage
@@ -309,7 +309,7 @@ GoFullPage capture it is always `true`.
 
 ## 1d. DECK OPTIMIZATION — THIS IS HALF THE JOB, NOT AN AFTERTHOUGHT
 
-Apex gap-fill is only one of the four passes. On older decks the dominant work is
+source gap-fill is only one of the four passes. On older decks the dominant work is
 **restructuring what is already there**. Measured across the reference decks:
 
 | Deck | Cards | Need splitting |
@@ -595,38 +595,38 @@ does not happen to cover stays wrong. The resolution:
   fascia; the build propagated it verbatim. Correct it, and record the discrepancy in the
   NOTES `verify_items` so the user sees the source erred.
 - **Where it is a genuine inter-source disagreement** rather than an error, do NOT
-  silently flip it. Surface it in the NOTES doc for the user to decide. (Example: Apex
+  silently flip it. Surface it in the NOTES doc for the user to decide. (Example: the source
   positions the arm at the side for PECS; Blanco's original description abducts.)
 
 ---
 
 ### RULE 8 — NEVER NAME THE SOURCE INSIDE A CARD (non-negotiable)
 
-**A card states the fact. It never says who asserted it.** The word "Apex" — and every
+**A card states the fact. It never says who asserted it.** The word "the source" — and every
 paraphrase of it — must not appear anywhere in a card: not in `Text`, not in `Extra`, not
 in any other field, not in a new card, not in a rewrite, not in a patch. This applies in
 creation mode too, where there is no original deck to blame.
 
-- BAD:  `According to Apex, the thoracolumbar fascia has {{c1::three}} layers.`
+- BAD:  `According to <SOURCE>, the thoracolumbar fascia has {{c1::three}} layers.`
 - GOOD: `The thoracolumbar fascia has {{c1::three}} layers.`
 
-- BAD:  `Apex ranks carbon monoxide production as {{c1::desflurane}} greater than isoflurane and far greater than sevoflurane.`
+- BAD:  `<SOURCE> ranks carbon monoxide production as {{c1::desflurane}} greater than isoflurane and far greater than sevoflurane.`
 - GOOD: `Carbon monoxide production is greatest with {{c1::desflurane}}, intermediate with isoflurane, and negligible with sevoflurane.`
 
-- BAD (in `Extra`): ` Apex emphasizes that <b>desiccated absorbent</b> is the prerequisite.`
+- BAD (in `Extra`): ` the source emphasizes that <b>desiccated absorbent</b> is the prerequisite.`
 - GOOD (in `Extra`): ` <b>Desiccated absorbent</b> is the prerequisite.`
 
 The rewrite is almost always the sentence with the attribution clause deleted. **Strip the
 attribution, keep the fact** — this rule never justifies dropping content, and a card that
 loses its meaning without the citation was never a fact card to begin with.
 
-**The paraphrases are the same violation.** "Per Apex", "the Apex module", "as taught in
-Apex", "the module states", "this course teaches", "the lecture emphasizes", "the textbook
+**The paraphrases are the same violation.** "Per the source", "the source module", "as taught in
+the source", "the module states", "this course teaches", "the lecture emphasizes", "the textbook
 lists", "the source describes" — all banned. Do not launder the attribution into a generic
 noun.
 
 **One exception, and it is not a card: the NOTES doc.** Rule 7's inter-source disagreements
-and source errors are recorded there by name, in `verify_items` — "Apex positions the arm at
+and source errors are recorded there by name, in `verify_items` — "the source positions the arm at
 the side for PECS; Blanco's original description abducts." That is the correct and only home
 for attribution. If a fact is genuinely contested, the card teaches it unattributed and the
 NOTES doc carries the disagreement.
@@ -845,7 +845,7 @@ it is the only thing that makes a contradiction *resolvable* rather than merely 
 - **Every card carries a `Textbook` value.** Module name and page for anything sourced from
   the module; the external reference for anything Rule 9 corrected or confirmed.
 - **Every card carries tags**, on three axes minimum:
-  `#Topic::Regional::Truncal::Paravertebral` · `#Source::APEX-Truncal` ·
+  `#Topic::Regional::Truncal::Paravertebral` · `#Source::Truncal` ·
   `#NCE::Basic-Principles`
 - Tags are what make 40,000 cards filterable, auditable, rebuildable after a bad import,
   and reviewable by exam domain. At 227 cards you can browse. At 40,000 you cannot, and
@@ -934,8 +934,8 @@ never builds on an earlier pass's breakage:
    into clinical pearls, move every cloze onto the highest-yield 1-2 word target, enforce the
    unit/abbreviation/punctuation rules. Apply section 3b. On an old deck this is the biggest
    pass by far.
-3. **Apex gap-fill** — page-by-page read, add new cards and edit existing ones
-4. **Hostile audit** — adversarial hunt for loss/gaps against *both* the original deck and the Apex module
+3. **source gap-fill** — page-by-page read, add new cards and edit existing ones
+4. **Hostile audit** — adversarial hunt for loss/gaps against *both* the original deck and the source module
 
 Plus a final scripted concept-level diff against the original deck, enforcing the user's
 "no information lost" rule mechanically.
@@ -1018,7 +1018,7 @@ paid for hundreds of times per module and returns nothing.
 | 4c. THE VERIFICATION PASS | any VERIFY phase (`PROMPT_verify.md` also summarises it) |
 | 4e. SCRATCH CLEANUP | reclaiming disk, or `cleanup.py` surprises you |
 | 4f. UNATTENDED SCHEDULING | changing how the scheduled runs behave |
-| 6. APEX MODULES — CAPTURE, OCR AND THE COVERAGE GATE | capture quality, OCR fallbacks, figure/IP handling |
+| 6. SOURCE CAPTURES — OCR AND THE COVERAGE GATE | capture quality, OCR fallbacks, figure/IP handling |
 | 6b. GOOGLE DRIVE — WHERE FILES LIVE | you need a folder ID |
 | STATUS HISTORY | diagnosing a repeat failure, or writing a post-mortem |
 

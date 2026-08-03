@@ -29,7 +29,7 @@ cannot run on the Google Drive FUSE mount (`disk I/O error` on any write).
 
 Read `HANDOFF.md` section 3b, especially **Rule 0** (yield filter — merged content often
 belongs in `Extra`), **Rule 5** (interference), and **Rule 8** (a merged card must not name
-Apex or any other source — strip attribution as you merge, keep the fact).
+the source, by any name — strip attribution as you merge, keep the fact).
 
 ## STEP 1 — SNAPSHOT FIRST. NON-NEGOTIABLE.
 

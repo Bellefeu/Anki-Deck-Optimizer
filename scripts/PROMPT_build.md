@@ -66,7 +66,7 @@ so if nothing queued.
 ## STEP 2 — EXTRACT (skip if optimize-only)
 
 ```bash
-python3 extract_apex.py "<module .pdf or folder>" "work/<module>/apex"
+python3 extract_source.py "<module .pdf or folder>" "work/<module>/source"
 ```
 
 Report `ocr_used`, `course_pages_missing`, `unaccounted_ink_px`, and the visual-token
@@ -112,7 +112,7 @@ touches, and anything in the main thread's context is re-sent on every later tur
 run — so reading thirty pages inline means paying for thirty pages on every subsequent
 turn, through build, notes and save-back. Spawn a subagent whose whole job is:
 
-> Read `work/<module>/apex/content_ocr.txt`, then every image in `read_targets` in
+> Read `work/<module>/source/content_ocr.txt`, then every image in `read_targets` in
 > order. Return: (a) a section-by-section outline of the module, (b) every figure with
 > what it depicts and whether it is IO-card material, keyed to its page, (c) anything
 > the OCR text renders wrongly or ambiguously, (d) any collapsed accordion or truncated
@@ -176,7 +176,7 @@ Apply rubric 3b to every card, in this order of precedence:
 | Rule 5 | interference — discriminating cues on near-identical cards |
 | Rule 6 | Extra field structure |
 | Rule 7 | source authoritative for scope, medical fact authoritative for accuracy |
-| Rule 8 | **never name the source in a card — no "Apex" anywhere in any field** |
+| Rule 8 | **never name the source in a card — no source name anywhere in any field** |
 | Rule 9 | **every checkable claim gets looked up — distance, dose, level, structure-on-a-path, direction, percentage** |
 | Rule 10 | **the deck must not contradict itself — build the claim index, resolve every collision** |
 | Rule 11 | **inherited cards are not pre-approved — one standard across the whole deck** |
@@ -185,15 +185,15 @@ Apply rubric 3b to every card, in this order of precedence:
 | Rule 14 | populate `Textbook`, tag every card |
 
 **Rule 8 in full, because it is new and absolute.** A card states the fact and never says
-who asserted it. "Apex" — and every paraphrase of it — must not appear in `Text`, in
+who asserted it. The source's name — and every paraphrase of it — must not appear in `Text`, in
 `Extra`, or in any other field, on an edited card or a newly written one.
 
-- BAD:  `According to Apex, the thoracolumbar fascia has {{c1::three}} layers.`
+- BAD:  `According to <SOURCE>, the thoracolumbar fascia has {{c1::three}} layers.`
 - GOOD: `The thoracolumbar fascia has {{c1::three}} layers.`
-- BAD:  `Apex ranks carbon monoxide production as {{c1::desflurane}} greater than isoflurane.`
+- BAD:  `<SOURCE> ranks carbon monoxide production as {{c1::desflurane}} greater than isoflurane.`
 - GOOD: `Carbon monoxide production is greatest with {{c1::desflurane}}, and lower with isoflurane.`
 
-"Per Apex", "the Apex module", "as taught in Apex", "the module states", "the lecture
+"Per the source", "the source module", "as taught in the source", "the module states", "the lecture
 emphasizes" are the same violation — do not launder the attribution into a generic noun.
 **Strip the attribution and keep the fact**; this never justifies dropping content. The one
 place attribution belongs is the NOTES doc's `verify_items`, which is not a card.
@@ -206,7 +206,7 @@ The passes:
    percentage. All six of Truncal's hard errors were one search away and none were caught by
    reading.
 2. **Structure & atomicity** — split laundry lists, rewrite chopped syntax, move clozes onto the highest-yield target.
-3. **Apex gap-fill** (skip if optimize-only). Check the claim index before adding anything.
+3. **source gap-fill** (skip if optimize-only). Check the claim index before adding anything.
 4. **Hostile audit** — adversarially hunt for loss and gaps against BOTH the original
    deck and the source. **Run this one as a subagent too.** It needs the whole deck and
    the whole source and returns a list of findings; done inline, both stay in context
@@ -308,7 +308,7 @@ failed because the target is HTML-wrapped — fix and rebuild.
 **Do not hand-edit `build_notes.js`.** Write `work/<module>/notes_config.json`:
 
 ```json
-{ "source_label": "<module> APEX", "source_pages": N, "ocr_used": true|false,
+{ "source_label": "<module> source", "source_pages": N, "ocr_used": true|false,
   "cards_before": N, "cards_after": N,
   "verify_items": [["Category", "the values", "why OCR-risky"]],
   "io": [{ "id":"IO-01", "file":"IO-01_topic.png", "page":N, "priority":"HIGH",

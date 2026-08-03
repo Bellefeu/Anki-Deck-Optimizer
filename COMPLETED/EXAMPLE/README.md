@@ -52,8 +52,8 @@ Input to `build_notes.js`. **Do not hand-edit `build_notes.js`.**
 cards — each needs its cropped source figure as a **visual reference only**, and those
 figures must never go into a card.
 
-## `audit/apex/extract_report.json`
-Output of `extract_apex.py`. The fields that matter on every run:
+## `audit/source/extract_report.json`
+Output of `extract_source.py`. The fields that matter on every run:
 
 - **`unaccounted_ink_px` must be `0`.** It asserts that every informative pixel on every
   page is either inside a high-confidence OCR word box or on the visual read list.

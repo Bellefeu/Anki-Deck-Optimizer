@@ -15,7 +15,7 @@ Layout produced:
     Old Anki Decks and Files/
       <Module>/
         Anki Deck/   <module>.apkg
-        Files/       the Apex PDF, or the whole capture folder
+        Files/       the source PDF, or the whole capture folder
 
 Usage:
     python3 archive_inputs.py --module "<Module Name>" \\
@@ -38,7 +38,7 @@ def normalize(name):
     """Same matching rule build_queue.py uses, so archiving finds what queueing paired."""
     stem = os.path.splitext(os.path.basename(name))[0].lower()
     stem = re.sub(r"[\s_\-]+", " ", stem)
-    stem = re.sub(r"\b(apex|module|deck)\b", "", stem)
+    stem = re.sub(r"\b(module|deck)\b", "", stem)
     return re.sub(r"\s+", " ", stem).strip()
 
 
@@ -109,8 +109,7 @@ def main():
     if not module:
         sys.exit('Required: --module "<Module Name>"')
     decks   = arg("--decks",   "Anki Decks")
-    # --apex is the pre-rename spelling, kept so an older prompt or script still works
-    apex    = arg("--source", None) or arg("--apex", "Source Files")
+    srcdir  = arg("--source", "Source Files")
     archive = arg("--archive", "Old Anki Decks and Files")
     go      = "--yes" in sys.argv
 
@@ -132,10 +131,10 @@ def main():
     if src_deck:
         keys.append(normalize(src_deck))
     keys.append(key)
-    src_apex = None
+    src_source = None
     for k in dict.fromkeys(keys):
-        src_apex = find(apex, k, exts=(".pdf",), allow_dir=True)
-        if src_apex:
+        src_source = find(srcdir, k, exts=(".pdf",), allow_dir=True)
+        if src_source:
             if k != key:
                 print(f"  (source located by the deck's filename key '{k}', "
                       f"not the module name)")
@@ -144,9 +143,9 @@ def main():
     print(f"=== ARCHIVE INPUTS: {module} ==="
           + ("" if go else "   (DRY RUN - add --yes to move)") + "\n")
     print(f"  deck   : {src_deck or 'NOT FOUND in ' + decks}")
-    print(f"  source : {src_apex or 'none found in ' + apex + ' (optimize-only module?)'}")
+    print(f"  source : {src_source or 'none found in ' + srcdir + ' (optimize-only module?)'}")
 
-    if not src_deck and not src_apex:
+    if not src_deck and not src_source:
         print("\n  Nothing to archive - inputs may already have been moved.")
         return 0
 
@@ -167,9 +166,9 @@ def main():
     jobs = []
     if src_deck:
         jobs.append((src_deck, dest_deck, False))
-    if src_apex:
+    if src_source:
         # a folder of captures gets its CONTENTS moved into Files/, not the folder itself
-        jobs.append((src_apex, dest_file, os.path.isdir(src_apex)))
+        jobs.append((src_source, dest_file, os.path.isdir(src_source)))
 
     for src, dest, flatten in jobs:
         if flatten:

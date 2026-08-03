@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "project": "CRNA Anki Deck Optimization",
+  "source_name": "",
   "last_updated": null,
   "run_count": 0,
   "totals": {
@@ -12,7 +13,7 @@
   "modules": [],
   "pending_modules": [],
   "environment_findings": [
-    "Apex PDFs are 100% image, zero text layer - pdftotext returns 0 words",
+    "source captures are 100% image, zero text layer - pdftotext returns 0 words",
     "sqlite3 CLI not installed; use Python sqlite3 module",
     "xxd not installed; use od",
     "zstandard requires: pip install zstandard --break-system-packages",
@@ -62,12 +63,12 @@
       "date": "2026-07-30",
       "issue": "Two silent infinite loops in the unattended orchestrator, neither covered by any test",
       "detail": "next_action.py resolved COMPLETED/ as HERE/COMPLETED, but every scheduled run copies the scripts to a fresh scratch dir where that does not exist, so has_verify_report() always returned False and VERIFY was re-issued on an already-verified module every run, forever. Separately, build_queue.py excluded only 'verified' modules from the queue; since a finished module rests at 'built-unverified' until the user runs --pass, refreshing the queue each run would have re-queued it and rebuilt it from scratch, discarding the verification. Neither could be seen from outside: both look like the pipeline working.",
-      "mitigation": "next_action.py now resolves COMPLETED as env COMPLETED_DIR -> paths.completed in project_state.json -> HERE/COMPLETED, re-validates that the chosen path exists, and exits 2 with an explanation rather than guessing when none resolve. It also refuses to issue BUILD for a queued deck whose .apkg is missing. build_queue.py now excludes every tracked module regardless of status, resolves its input dirs as argv -> env -> recorded -> default, and records project_root/apex_pdf_dir/deck_dir/completed for later runs. selftest.py sections 6 and 7 cover the whole decision table and the multi-deck loop - there was no coverage of next_action.py or build_queue.py at all before, which is how both shipped."
+      "mitigation": "next_action.py now resolves COMPLETED as env COMPLETED_DIR -> paths.completed in project_state.json -> HERE/COMPLETED, re-validates that the chosen path exists, and exits 2 with an explanation rather than guessing when none resolve. It also refuses to issue BUILD for a queued deck whose .apkg is missing. build_queue.py now excludes every tracked module regardless of status, resolves its input dirs as argv -> env -> recorded -> default, and records project_root/source_dir/deck_dir/completed for later runs. selftest.py sections 6 and 7 cover the whole decision table and the multi-deck loop - there was no coverage of next_action.py or build_queue.py at all before, which is how both shipped."
     },
     {
       "date": "2026-07-30",
       "issue": "--pass marked a module verified but silently failed to archive its inputs",
-      "detail": "verify_deck.py --pass invoked archive_inputs.py with ANKI_DECK_DIR/APEX_PDF_DIR/ARCHIVE_DIR defaulting to relative paths ('Anki Decks', ...). A --pass runs from a local scratch copy where those resolve to nothing, and the call used check=False inside a bare try/except, so it printed nothing and moved nothing. The original deck stayed in Anki Decks/ - which archive_inputs.py exists specifically to prevent, because a later run can then take an already-optimized deck as its source and gap-fill it twice. Separately, --pass called update_handoff.regenerate() before archiving, and render_status raised KeyError on a module record missing an optional field, aborting the pass after the status flip but before the file moves.",
+      "detail": "verify_deck.py --pass invoked archive_inputs.py with ANKI_DECK_DIR/SOURCE_DIR/ARCHIVE_DIR defaulting to relative paths ('Anki Decks', ...). A --pass runs from a local scratch copy where those resolve to nothing, and the call used check=False inside a bare try/except, so it printed nothing and moved nothing. The original deck stayed in Anki Decks/ - which archive_inputs.py exists specifically to prevent, because a later run can then take an already-optimized deck as its source and gap-fill it twice. Separately, --pass called update_handoff.regenerate() before archiving, and render_status raised KeyError on a module record missing an optional field, aborting the pass after the status flip but before the file moves.",
       "mitigation": "verify_deck.py --pass now resolves the three folders as env -> paths recorded in project_state.json -> conventional default, validates the deck folder exists, and after archiving re-checks that the deck actually left the input folder, reporting loudly if it did not. build_queue.py records paths.archive_dir alongside the others. update_handoff.render_status uses .get throughout, and --pass wraps regenerate() so a handoff-rendering failure can never block the file moves. selftest.py section 8 covers the whole path end to end."
     }
   ],

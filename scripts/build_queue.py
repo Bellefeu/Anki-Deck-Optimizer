@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scan the Apex PDF folder and the Anki deck folder, pair them by filename,
+"""Scan the source capture folder and the Anki deck folder, pair them by filename,
 read each deck's real deck_id straight out of the .apkg, and write the result
 into project_state.json as the pending work queue.
 
@@ -51,7 +51,7 @@ def normalize(name):
     stem = os.path.splitext(os.path.basename(name))[0]
     stem = stem.lower()
     stem = re.sub(r"[\s_\-]+", " ", stem)       # collapse separators
-    stem = re.sub(r"\b(apex|module|deck)\b", "", stem)   # drop noise words
+    stem = re.sub(r"\b(module|deck)\b", "", stem)          # drop noise words
     return re.sub(r"\s+", " ", stem).strip()
 
 
@@ -89,11 +89,10 @@ def deck_info(apkg_path):
 def resolve_dir(argv_val, env_var, state_key, default):
     """argv > environment > the path a previous run recorded > local default.
 
-    `env_var` and `state_key` may each be a tuple, tried in order. That is how the
-    old APEX_PDF_DIR / apex_pdf_dir names keep working after the input folder was
-    renamed to "Source Files" - a stale environment or a state file written by an
-    older run still resolves instead of silently falling through to the default,
-    which would surface as an empty scan and read exactly like "nothing to do".
+    `env_var` and `state_key` may each be a tuple, tried in order, so more than one
+    spelling of a setting can be honoured. A recorded path that no longer resolves
+    must never be accepted silently - it would surface as an empty scan, which
+    reads exactly like "nothing left to do".
 
     A recorded path is re-validated before it is trusted. A later run may reach the
     same folder by a different route than the run that recorded it, and an absolute
@@ -122,8 +121,7 @@ def resolve_dir(argv_val, env_var, state_key, default):
 
 def main():
     pdf_dir  = resolve_dir(sys.argv[1] if len(sys.argv) > 1 else None,
-                           ("SOURCE_DIR", "APEX_PDF_DIR"),
-                           ("source_dir", "apex_pdf_dir"), DEFAULT_SRC_DIR)
+                           "SOURCE_DIR", "source_dir", DEFAULT_SRC_DIR)
     deck_dir = resolve_dir(sys.argv[2] if len(sys.argv) > 2 else None,
                            "ANKI_DECK_DIR", "deck_dir", DEFAULT_DECK_DIR)
 
@@ -132,8 +130,8 @@ def main():
             sys.exit(f"ERROR: {lbl} folder not found: {d}")
         warn_if_maybe_dehydrated(d, f"{lbl} folder")
 
-    # An Apex source is EITHER a single .pdf OR a folder of capture PDFs.
-    # extract_apex.py accepts both; the queue must too, or a folder of captures
+    # A source is EITHER a single .pdf OR a folder of capture PDFs.
+    # extract_source.py accepts both; the queue must too, or a folder of captures
     # silently downgrades the module to optimize-only and skips gap-fill.
     pdfs = {}
     for f in os.listdir(pdf_dir):
@@ -180,13 +178,13 @@ def main():
             "apkg": deck_path, "pdf": pdf_path,
             "mode": mode, "cards_before": n, "status": "pending",
         })
-        tag = "" if mode == "full" else "   [OPTIMIZE-ONLY - no Apex source]"
+        tag = "" if mode == "full" else "   [OPTIMIZE-ONLY - no source captures]"
         print(f"  OK  {pretty:<38} deck_id={did}  cards={n}{tag}")
 
     for key in matched:
         add(key, decks[key], pdfs[key], "full")
 
-    # A deck with no Apex module still needs passes 1, 2 and 4. These are often the
+    # A deck with no source module still needs passes 1, 2 and 4. These are often the
     # OLDEST decks - the ones most in need of restructuring. Never drop them.
     for key in deck_only:
         add(key, decks[key], None, "optimize-only")
@@ -238,7 +236,7 @@ def main():
 
     n_opt = sum(1 for m in queue if m.get("mode") == "optimize-only")
     if n_opt:
-        print(f"\n   {n_opt} deck(s) queued OPTIMIZE-ONLY: no Apex module, so pass 3")
+        print(f"\n   {n_opt} deck(s) queued OPTIMIZE-ONLY: no source module, so pass 3")
         print("   (gap-fill) is skipped. Passes 1, 2 and 4 still run in full.")
 
     print(f"\nQueue written to project_state.json: {len(queue)} module(s) pending")

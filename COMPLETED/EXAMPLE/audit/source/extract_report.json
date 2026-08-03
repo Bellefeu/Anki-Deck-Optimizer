@@ -3,7 +3,7 @@
   "pdf_count": 5,
   "pdf_pages": 12,
   "ocr_used": true,
-  "content": "work/EXAMPLE MODULE/apex/content_ocr.txt",
+  "content": "work/EXAMPLE MODULE/source/content_ocr.txt",
   "course_pages_found": [
     1,
     2,
@@ -32,11 +32,11 @@
   "visual_tokens_plan": 12994,
   "visual_tokens_numbers": 1518,
   "read_targets": [
-    "work/EXAMPLE MODULE/apex/read/p01-001-sheet.png",
+    "work/EXAMPLE MODULE/source/read/p01-001-sheet.png",
     "..."
   ],
   "verify_targets": [
-    "work/EXAMPLE MODULE/apex/read/p01-001-numbers.png",
+    "work/EXAMPLE MODULE/source/read/p01-001-numbers.png",
     "..."
   ],
   "page_stats": [

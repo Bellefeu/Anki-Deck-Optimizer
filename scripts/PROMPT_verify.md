@@ -88,17 +88,17 @@ that looks unusual.
 
 **Rule 8 gets a whole-deck sweep, not just the sample.** The script's section B catches the
 common constructions, but read the deck for anything that attributes a fact rather than
-stating it — "According to Apex...", "Per Apex...", "Apex ranks/describes/emphasizes...",
+stating it — "According to the source...", "Per the source...", "the source ranks/describes/emphasizes...",
 "the module states...", "as taught in the lecture...". Every hit is a defect and gets
 patched in Step 5.
 
-- BAD:  `According to Apex, the thoracolumbar fascia has {{c1::three}} layers.`
+- BAD:  `According to <SOURCE>, the thoracolumbar fascia has {{c1::three}} layers.`
 - GOOD: `The thoracolumbar fascia has {{c1::three}} layers.`
 
 The repair is a `rewrite` that deletes the attribution clause and keeps the fact intact —
 never a delete, and never a rewording that quietly loses content. Check `Extra` as
-carefully as `Text`; attribution survives there most often. The word "apex" is also
-anatomical (apex of the heart, apex beat) — those are fine, and the script excludes them.
+carefully as `Text`; attribution survives there most often. If your source's name also
+appears as an ordinary term in the material, the script already excludes that sense.
 Attribution that belongs to a genuine Rule 7 inter-source disagreement moves to the NOTES
 doc's `verify_items`; it does not stay on the card.
 

@@ -94,8 +94,7 @@ def main():
     #    worse than none, because archiving then "succeeds" having moved nothing.
         def _path(env_var, state_key, default):
             """env > recorded path > default. Each of env_var and state_key may be
-            a tuple tried in order, so the pre-rename APEX_PDF_DIR / apex_pdf_dir
-            names still resolve after the input folder became "Source Files"."""
+            a tuple tried in order, so more than one spelling can be honoured."""
             for ev in ((env_var,) if isinstance(env_var, str) else env_var):
                 v = os.environ.get(ev)
                 if v:
@@ -111,8 +110,7 @@ def main():
             return default
 
         decks   = _path("ANKI_DECK_DIR", "deck_dir",     "Anki Decks")
-        apex    = _path(("SOURCE_DIR", "APEX_PDF_DIR"),
-                        ("source_dir", "apex_pdf_dir"), "Source Files")
+        srcdir  = _path("SOURCE_DIR", "source_dir", "Source Files")
         archive = _path("ARCHIVE_DIR",   "archive_dir",  "Old Anki Decks and Files")
 
         if not os.path.isdir(decks):
@@ -123,7 +121,7 @@ def main():
         else:
             try:
                 subprocess.run([sys.executable, os.path.join(HERE, "archive_inputs.py"),
-                                "--module", name, "--decks", decks, "--apex", apex,
+                                "--module", name, "--decks", decks, "--source", srcdir,
                                 "--archive", archive, "--yes"], check=False)
             except Exception as e:
                 print(f"  (input archiving failed to run: {e})")
@@ -167,7 +165,7 @@ def main():
     print(f"  {len(rows)} notes\n")
 
     # Canonical report path. Written here so a later session finds it by module name
-    # alone - the same discovery convention as the apex:deck pairing.
+    # alone - the same discovery convention as the source:deck pairing.
     import datetime
     mod = os.path.basename(os.path.dirname(os.path.abspath(apkg)))
     audit = os.path.join(os.path.dirname(os.path.abspath(apkg)), "audit")
@@ -229,7 +227,7 @@ def main():
         print(f"    [{nid}] {fname}: {hit[:90]}")
     if attrib:
         print("    Each is a defect: strip the attribution, keep the fact, patch with a")
-        print("    rewrite. Anatomical 'apex' is excluded and not counted here.")
+        print("    rewrite. A brand name that doubles as anatomy is excluded here.")
         fail += 1
 
     # ---------- C. rubric mechanics (section 3b rule 3) ----------
@@ -354,7 +352,7 @@ def main():
     print("""
 Still required before this counts as verified:
   0. Read the deck for rule 8 by eye as well. Section B catches the standard
-     attribution constructions, not every paraphrase of "Apex says so".
+     attribution constructions, not every paraphrase of "the source says so".
   0b. Work section H (rule 9) and section I (rule 13) by hand. The script can
      list every checkable claim; only you can look one up. An unchecked number
      is a number you asserted.

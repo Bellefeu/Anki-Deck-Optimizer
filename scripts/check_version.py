@@ -18,7 +18,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 MANIFEST = os.path.join(HERE, "VERSION.json")
 
 TRACKED = [
-    "deps.py", "build_queue.py", "extract_apex.py", "build_deck.py",
+    "deps.py", "build_queue.py", "extract_source.py", "build_deck.py",
     "update_handoff.py", "verify_deck.py", "verify_corpus.py",
     "find_duplicates.py", "cleanup.py", "archive_inputs.py", "selftest.py",
     "check_consistency.py", "handoff.py", "deck_digest.py",

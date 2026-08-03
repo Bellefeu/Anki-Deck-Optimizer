@@ -93,7 +93,7 @@ scripts/
 The pipeline reads course prose as OCR text and reads *pixels* only for regions OCR
 could not transcribe — figures, low-confidence words, and every line carrying a number.
 That is a large saving, but it is only safe because it is proved rather than guessed:
-`extract_apex.py` asserts `unaccounted_ink_px == 0`, meaning every informative pixel on
+`extract_source.py` asserts `unaccounted_ink_px == 0`, meaning every informative pixel on
 every page is either inside a high-confidence OCR word box or on the visual read list.
 Every failure branch hands over the whole page instead. Set `COVERAGE=page` to disable
 the whole mechanism and read pages whole.

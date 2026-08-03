@@ -49,7 +49,7 @@ def main():
 
     # ---------- 2. required files ----------
     print("\n--- 2. Files present ---")
-    needed = ["deps.py", "extract_apex.py", "build_queue.py", "build_deck.py",
+    needed = ["deps.py", "extract_source.py", "build_queue.py", "build_deck.py",
               "update_handoff.py", "verify_deck.py", "verify_corpus.py",
               "find_duplicates.py", "cleanup.py", "archive_inputs.py",
               "check_version.py", "build_notes.js",
@@ -172,7 +172,11 @@ def main():
         json.dump({"outstanding": [], "gaps_filled": [], "summary": "selftest"},
                   open(os.path.join(moddir, "meta.json"), "w"))
 
-        env = dict(os.environ, COMPLETED_DIR=os.path.join(work, "COMPLETED"))
+        # SOURCE_NAME is what turns on the brand half of Rule 8. The subprocess gets
+        # its own environment, so it has to be passed explicitly - setting os.environ
+        # later in this file would be too late for this dict.
+        env = dict(os.environ, COMPLETED_DIR=os.path.join(work, "COMPLETED"),
+                   SOURCE_NAME="Crest")
         r = subprocess.run([sys.executable, os.path.join(HERE, "build_deck.py"), "__selftest__"],
                            capture_output=True, text=True, cwd=HERE, env=env, timeout=180)
         out = r.stdout
@@ -388,20 +392,24 @@ def main():
         check("creation build OK", "BUILD OK" in r2.stdout, r2.stdout[-300:])
 
         # ---------- 5b. rule 8: a card never names its source ----------
-        # "According to Apex, ..." must never reach a card. The detector has to be
-        # blind to anatomical 'apex' (apex of the heart, apex beat) or it gets muted.
+        # The brand half of Rule 8 only works once the brand is named, so configure
+        # it the way a real user would. The generic constructions work regardless.
+        os.environ["SOURCE_NAME"] = "Crest"
+        # "According to <SOURCE>, ..." must never reach a card. The detector also has
+        # to stay blind to a brand name that collides with a term in the material
+        # ("Crest" the source vs. "the iliac crest") or people mute it and lose Rule 8.
         print("\n--- 5b. Rule 8 (no source named in a card) ---")
         sys.path.insert(0, HERE)
         from build_deck import source_attribution as _sa
         check("attribution in Text detected",
-              bool(_sa("According to Apex, the thoracolumbar fascia has {{c1::three}} layers.")))
+              bool(_sa("According to Crest, the thoracolumbar fascia has {{c1::three}} layers.")))
         check("attribution in Extra detected",
-              bool(_sa(" <b>Apex</b> emphasizes that desiccated absorbent is the prerequisite.")))
+              bool(_sa(" <b>Crest</b> emphasizes that desiccated absorbent is the prerequisite.")))
         check("paraphrased attribution detected",
               bool(_sa("The module states that the nerve runs deep.")))
-        check("anatomical apex NOT flagged",
-              not _sa("The apex of the heart lies at the fifth intercostal space.")
-              and not _sa("The apex beat is displaced laterally."))
+        check("colliding domain term NOT flagged",
+              not _sa("The iliac crest lies at the level of L4.")
+              and not _sa("The crest of the ilium is the landmark."))
         check("clean card NOT flagged",
               not _sa("The thoracolumbar fascia has {{c1::three}} layers."))
 
@@ -411,8 +419,8 @@ def main():
                                    "pdf": None, "mode": "optimize-only",
                                    "cards_before": 0, "status": "pending"}]
         json.dump(st2, open(os.path.join(HERE, "project_state.json"), "w"), indent=2)
-        json.dump([{"text": "According to Apex, the thoracolumbar fascia has {{c1::three}} layers.",
-                    "extra": " Per Apex.<br><br>The <b>thoracolumbar fascia</b> has three layers."}],
+        json.dump([{"text": "According to Crest, the thoracolumbar fascia has {{c1::three}} layers.",
+                    "extra": " Per Crest.<br><br>The <b>thoracolumbar fascia</b> has three layers."}],
                   open(os.path.join(moddir, "new_cards.json"), "w"))
         r8 = subprocess.run([sys.executable, os.path.join(HERE, "build_deck.py"), "__selftest__"],
                             capture_output=True, text=True, cwd=HERE, env=env, timeout=180)
@@ -625,7 +633,7 @@ def queue_loop_tests():
 
 
 def pass_archive_tests():
-    """`--pass` must move the ORIGINAL deck and its Apex source out of the input
+    """`--pass` must move the ORIGINAL deck and its source captures out of the input
     folders. It resolves those folders from paths recorded in project_state.json,
     because a --pass normally runs from a local scratch copy where the conventional
     relative paths resolve to nothing - and archiving that moves nothing while
@@ -636,7 +644,7 @@ def pass_archive_tests():
     root = tempfile.mkdtemp(prefix="selftest-pass-")
     try:
         decks   = os.path.join(root, "Anki Decks");             os.makedirs(decks)
-        apexd   = os.path.join(root, "Source Files");        os.makedirs(apexd)
+        srcd   = os.path.join(root, "Source Files");        os.makedirs(srcd)
         arch    = os.path.join(root, "Old Anki Decks and Files"); os.makedirs(arch)
         scripts = os.path.join(root, "scripts");                 os.makedirs(scripts)
         for f in ("verify_deck.py", "archive_inputs.py", "deps.py", "cleanup.py",
@@ -662,8 +670,8 @@ def pass_archive_tests():
                        zstandard.ZstdCompressor().compress(open(db, "rb").read()))
             z.writestr("media", zstandard.ZstdCompressor().compress(b"{}"))
             z.writestr("meta", bytes([8, 3]))
-        # the Apex source as a capture FOLDER, which is the shape a real module has
-        capt = os.path.join(apexd, NAME); os.makedirs(capt)
+        # the source as a capture FOLDER, which is the shape a real module has
+        capt = os.path.join(srcd, NAME); os.makedirs(capt)
         open(os.path.join(capt, "capture01.pdf"), "wb").write(b"%PDF-1.4\n%%EOF\n")
 
         json.dump({"run_count": 1, "last_updated": "2026-01-01",
@@ -672,11 +680,11 @@ def pass_archive_tests():
                                 "cards_before": 1, "cards_after": 1,
                                 "added": 0, "edited": 0}],
                    "pending_modules": [],
-                   "paths": {"deck_dir": decks, "apex_pdf_dir": apexd, "archive_dir": arch}},
+                   "paths": {"deck_dir": decks, "source_dir": srcd, "archive_dir": arch}},
                   open(os.path.join(scripts, "project_state.json"), "w"))
 
         env = dict(os.environ)
-        for k in ("ANKI_DECK_DIR", "APEX_PDF_DIR", "ARCHIVE_DIR"):
+        for k in ("ANKI_DECK_DIR", "SOURCE_DIR", "ARCHIVE_DIR"):
             env.pop(k, None)          # force resolution via the recorded paths
         env["HANDOFF_OUTDIR"] = os.path.join(root, "_out")
         r = subprocess.run([sys.executable, os.path.join(scripts, "verify_deck.py"),
@@ -691,7 +699,7 @@ def pass_archive_tests():
               not glob.glob(os.path.join(decks, "*.apkg")), out)
         check("deck landed in the archive",
               os.path.exists(os.path.join(arch, NAME, "Anki Deck", NAME + ".apkg")), out)
-        check("Apex captures landed in the archive",
+        check("source captures landed in the archive",
               os.path.exists(os.path.join(arch, NAME, "Files", "capture01.pdf")), out)
         check("archiving reported, not silently skipped",
               "inputs archived under" in out and "NOT ARCHIVED" not in out, out)
@@ -716,7 +724,7 @@ def pass_archive_tests():
         json.dump({"run_count": 1, "last_updated": "2026-01-01",
                    "modules": [{"name": "Sparse Rec", "status": "built-unverified"}],
                    "pending_modules": [],
-                   "paths": {"deck_dir": decks, "apex_pdf_dir": apexd, "archive_dir": arch}},
+                   "paths": {"deck_dir": decks, "source_dir": srcd, "archive_dir": arch}},
                   open(os.path.join(scripts, "project_state.json"), "w"))
         r = subprocess.run([sys.executable, os.path.join(scripts, "verify_deck.py"),
                             "--pass", "Sparse Rec"], capture_output=True, text=True,
@@ -804,17 +812,17 @@ def consistency_tests():
 
 
 def coverage_gate_tests():
-    """extract_apex.py's coverage gate decides what NEVER gets looked at, so it
+    """extract_source.py's coverage gate decides what NEVER gets looked at, so it
     is the one part of the pipeline where a bug is silent by construction: a
     dropped figure looks exactly like a page that had no figure. Everything here
     is about proving the gate over-reads rather than under-reads."""
     print("\n--- 9. Visual-read coverage gate ---")
     try:
-        import extract_apex as ex
+        import extract_source as ex
         from PIL import Image, ImageDraw
         import numpy as np
     except Exception as e:
-        check("extract_apex imports", False, str(e))
+        check("extract_source imports", False, str(e))
         return
 
     # --- the footer regex, against what tesseract actually emits.

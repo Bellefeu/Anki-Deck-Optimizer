@@ -31,7 +31,7 @@ ones named here; `update_handoff.py` is imported by `build_deck.py`.
 Copy locally too:
 - `COMPLETED/<module>/<module> (FINAL).apkg` — the deck being patched
 - `COMPLETED/<module>/audit/` if it exists — prior ops and changelog
-- `work/<module>/apex/` if it survives — needed for source verification and IO crops
+- `work/<module>/source/` if it survives — needed for source verification and IO crops
 
 Read `HANDOFF.md`, especially **section 3b** (the editorial rubric) and the two gates noted
 in section 1b. Load `project_state.json`.
@@ -94,19 +94,19 @@ Rules that matter here specifically:
 - **A source error gets corrected AND recorded.** Per Rule 7, established medical fact
   outranks the module. Fix the card, then add the discrepancy to `notes_config.json`'s
   `verify_items` so the NOTES doc shows the source erred.
-- **A card must never name its source — Rule 8, non-negotiable.** No "Apex" in `Text`,
-  `Extra`, or any other field, and no paraphrase of it ("per Apex", "the Apex module",
+- **A card must never name its source — Rule 8, non-negotiable.** No source name in `Text`,
+  `Extra`, or any other field, and no paraphrase of it ("per the source", "the source module",
   "the module states", "as taught in the lecture"). This applies to the cards you patch
   *and* to every replacement string you write.
 
-  - BAD:  `According to Apex, the thoracolumbar fascia has {{c1::three}} layers.`
+  - BAD:  `According to <SOURCE>, the thoracolumbar fascia has {{c1::three}} layers.`
   - GOOD: `The thoracolumbar fascia has {{c1::three}} layers.`
 
-  Repair with `rewrite` — an `edit` find/replace that snips "According to Apex, " leaves a
+  Repair with `rewrite` — an `edit` find/replace that snips "According to <SOURCE>, " leaves a
   lowercase orphan ("the thoracolumbar fascia has...") and a stale `sfld`. Strip the
   attribution and keep the fact; never drop content to satisfy this rule. If the
   attribution existed because two sources genuinely disagree, move it to `verify_items` in
-  the NOTES doc, which is not a card. Anatomical "apex" (apex of the heart, apex beat) is
+  the NOTES doc, which is not a card. A source name that doubles as a domain term is
   fine and is not a violation.
 - Apply the non-blocking items in the same patch. Cheap now, another whole cycle later.
 

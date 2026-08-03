@@ -8,7 +8,7 @@ COMPLETED/<module>/
   <module> (FINAL).txt       one card per line, Text|Extra
   <module> (NOTES).docx      what changed, what to verify, IO card requests
   audit/                     ops.json, new_cards.json, meta.json, changelog.json,
-                             extract_report.json, apex/content*.txt
+                             extract_report.json, source/content*.txt
 ```
 
 **The `audit/` folder is the only record of *why* each card changed.** A previous

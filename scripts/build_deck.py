@@ -47,16 +47,16 @@ def has_semicolon(text):
 
 
 # ---------- RULE 8: a card never names its source ----------
-# "According to Apex, the thoracolumbar fascia is..." is wrong; "The thoracolumbar
+# "According to <SOURCE>, the thoracolumbar fascia is..." is wrong; "The thoracolumbar
 # fascia is..." is right. The fact is asserted in the deck's own voice, in every
 # field, on every card.
 #
-# Deliberately written as attribution CONSTRUCTIONS rather than a bare "apex" token
-# match: apex is also an anatomical word (apex of the heart, apex beat, apical
+# Deliberately written as attribution CONSTRUCTIONS rather than a bare brand token
+# match: a brand name can also be a domain word (a source called "Crest" vs. the
 # segment), so a token match would cry wolf on every cardiology card and get muted.
-# _BARE_APEX below then catches capital-A "Apex" used as a proper noun, minus the
+# _BARE_SOURCE below then catches the configured brand name used as a proper noun, minus the
 # anatomical phrasings.
-_SRC_NOUN = (r"(?:Apex(?!\s+(?:of|beat|impulse|cordis|region))|the module|this module|"
+_SRC_NOUN = (r"(?:the module|this module|"
              r"the lecture|the textbook|the course material|the source module)")
 _ATTRIB_VERB = (r"(?:states?|says?|notes?|lists?|ranks?|describes?|emphasi[sz]es|teaches|"
                 r"defines?|reports?|claims?|considers?|recommends?|specifies|indicates?|"
@@ -66,19 +66,84 @@ ATTRIB_RE = re.compile(
     r"\b(?:according to|based on|per|as (?:taught|described|stated|presented|noted|defined)"
     r"(?:\s+(?:in|by))?|cited in|in|from)\s+" + _SRC_NOUN + r"\b"
     r"|\b" + _SRC_NOUN + r"(?:'s)?\s+" + _ATTRIB_VERB + r"\b"
-    r"|\bApex(?:'s)?\s+(?:module|text|textbook|chapter|course|curriculum|material|content)\b",
+    r"|\b" + _SRC_NOUN + r"(?:'s)?\s+(?:module|text|textbook|chapter|course|"
+    r"curriculum|material|content)\b",
     re.I)
-_BARE_APEX = re.compile(r"\bApex\b(?!\s+(?:of|beat|impulse|cordis|region))")
+
+# The name of the course/product the deck is built from, if it has one.
+# Rule 8 forbids naming the source inside a card, and a brand name is the most
+# common way it leaks. Set SOURCE_NAME (env, or "source_name" in
+# project_state.json) and every bare mention of it is flagged too.
+#
+# Left unset, the generic constructions above still catch "the module states",
+# "according to the course", and friends - you just lose the brand check.
+#
+# FALSE_POSITIVE_AFTER exists because a brand name can collide with a real
+# term used in the material itself. A source named "Crest" must not turn "the
+# iliac crest" into a Rule 8 violation; the words that legitimately follow the
+# domain sense go here, and a match followed by one of them is left alone.
+# Extend these if your SOURCE_NAME collides with a word in your own material.
+# A collision can sit on either side of the name, so both directions are checked:
+#   trailing - a source named "Angle" vs. "the angle OF the rib"
+#   leading  - a source named "Crest" vs. "the ILIAC crest"
+FALSE_POSITIVE_AFTER  = ("of", "beat", "impulse", "cordis", "region", "sign", "line")
+FALSE_POSITIVE_BEFORE = ("iliac", "the", "a", "an", "anterior", "posterior", "superior",
+                         "inferior", "medial", "lateral")
+
+
+def _source_name():
+    """Read lazily, not at import, so a caller can set SOURCE_NAME after import and
+    so an edited project_state.json takes effect without a restart."""
+    import json
+    n = os.environ.get("SOURCE_NAME", "").strip()
+    if n:
+        return n
+    try:
+        return (json.load(open(os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "project_state.json"))).get("source_name") or "").strip()
+    except Exception:
+        return ""
+
+
+_BARE_CACHE = {}
+
+
+def _bare_source_re():
+    n = _source_name()
+    if not n:
+        return None
+    if n not in _BARE_CACHE:
+        # Trailing guard is a lookahead; the leading guard is checked in code because
+        # Python's re requires a FIXED-WIDTH lookbehind and this list is not.
+        _BARE_CACHE[n] = re.compile(
+            r"\b" + re.escape(n) + r"\b"
+            r"(?!\s+(?:" + "|".join(FALSE_POSITIVE_AFTER) + r"))", re.I)
+    return _BARE_CACHE[n]
+
+
+def _preceded_by_domain_word(plain, start):
+    """True if the word immediately before `start` marks the domain sense."""
+    before = plain[:start].rstrip()
+    if not before:
+        return False
+    return before.split()[-1].lower().strip("(\"'") in FALSE_POSITIVE_BEFORE
 
 
 def source_attribution(text):
     """Rule 8 hits in one field. Returns a list of offending snippets (empty = clean).
 
-    Anatomical 'apex' is legitimate and is not reported."""
+    A brand name that collides with a term in the material itself (a source named
+    "Crest" vs. "the iliac crest") is not reported - see FALSE_POSITIVE_AFTER."""
     plain = re.sub(r"<[^>]+>", " ", text or "")
     spans = [m.span() for m in ATTRIB_RE.finditer(plain)]
     hits = [plain[a:b].strip() for a, b in spans]
-    for m in _BARE_APEX.finditer(plain):
+    bare = _bare_source_re()
+    if bare is None:
+        return hits
+    for m in bare.finditer(plain):
+        if _preceded_by_domain_word(plain, m.start()):
+            continue
         if not any(a <= m.start() < b for a, b in spans):
             hits.append("..." + plain[max(0, m.start() - 30):m.end() + 30].strip() + "...")
     return hits

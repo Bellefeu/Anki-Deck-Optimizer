@@ -25,7 +25,7 @@ const meta      = rd('meta.json', { outstanding: [], gaps_filled: [], summary: '
 const cfg       = rd('notes_config.json', {});
 
 // IO card requests come from notes_config.json:
-//   { "source_label": "Truncal APEX", "source_pages": 30,
+//   { "source_label": "Truncal source", "source_pages": 30,
 //     "cards_before": 150, "cards_after": 228,
 //     "verify_items": [["Nerve root ranges","C5-C7 ...","why it's OCR-risky"], ...],
 //     "io": [ { id, file, page, priority, topic, tests, whyImage, occlude, labels } ] }
@@ -57,7 +57,7 @@ children.push(P([body(
 // ---------- section 1: IO requests ----------
 children.push(new Paragraph({ children: [new PageBreak()] }));
 children.push(H('Section 1 — Image Occlusion cards to create manually', HeadingLevel.HEADING_1));
-children.push(P([body('Each item below needs a card you build yourself using your own image. The Apex figure is reproduced beneath each entry '),
+children.push(P([body('Each item below needs a card you build yourself using your own image. The the source figure is reproduced beneath each entry '),
                  new TextRun({ text: 'purely as a visual reference', bold: true }),
                  body(' so you know exactly which view to recreate — it is not licensed for use in the cards themselves.')]));
 
@@ -70,7 +70,7 @@ IO.forEach((item) => {
     width: { size: 9200, type: WidthType.DXA },
     rows: [
       ['Priority', item.priority],
-      ['Apex page', `p. ${item.page}`],
+      ['the source page', `p. ${item.page}`],
       ['What it tests', item.tests],
       ['Why an image', item.whyImage],
       ['Occlusion plan', item.occlude],
@@ -90,7 +90,7 @@ IO.forEach((item) => {
     })),
   }));
 
-  children.push(P([new TextRun({ text: 'Reference figure (Apex — do not use in card):', bold: true, size: 20, color: '888888' })],
+  children.push(P([new TextRun({ text: 'Reference figure (the source — do not use in card):', bold: true, size: 20, color: '888888' })],
     { spacing: { before: 200, after: 80 } }));
 
   const buf = fs.readFileSync(FIG + item.file);
