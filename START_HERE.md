@@ -134,9 +134,9 @@ Two folders, two things to drop in. Names must match.
     30+ pages of screenshots without a text layer will be 50-100% of your
     LLM usage limits alone.
 
-If you are using text documents, upload them directly (doc, ppt, txt, etc.)
-If you are using screenshots, capture the source files as individual PDFs (GoFullPage or similar).
-    Capture every page. Do **not** merge the PDFs with an online tool — it destroys the text
+- If you are using text documents, upload them directly (doc, ppt, txt, etc).
+- If you are using screenshots, capture the source files as individual PDFs (GoFullPage or similar).
+    -- Capture every page. Do **not** merge the PDFs with an online tool — it destroys the text
     layer and uploads your course material to a third party.
 One **folder per module**, named
 however you want the module named everywhere else.
