@@ -40,9 +40,9 @@ First, you need to open a terminal inside the project folder.
 
 How to open the terminal to your folder:
 
-- macOS: Open the Terminal app, type cd  (make sure to include the space), drag the project folder from Finder directly into the terminal window, and press Enter.
+- macOS: Open the Terminal app, type ```cd ```  (make sure to include the space), drag the project folder from Finder directly into the terminal window, and press Enter.
 
-- Windows: Open the project folder in File Explorer, click the address bar at the very top, type cmd (or powershell), and press Enter.
+- Windows: Open the project folder in File Explorer, click the address bar at the very top, type ```cmd``` (or ```powershell```), and press Enter.
 
 - Linux: Right-click anywhere inside the project folder and select Open in Terminal.
 
