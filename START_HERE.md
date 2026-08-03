@@ -159,6 +159,7 @@ Set it running and read the results later.
 
 In a **fresh Cowork chat**, paste this. Replace the folder path with yours.
 
+```
 > - Please create a new scheduled task with the following exact specifications:
 >
 > - Name: Auto anki optimize
@@ -168,6 +169,7 @@ In a **fresh Cowork chat**, paste this. Replace the folder path with yours.
 > - Approvals: Skip all approvals.
 > - Folder: /full/path/to/your/project/folder
 > - Conditions: Scheduled tasks run even when the computer is asleep and offline.
+```
 
 ### Then
 
