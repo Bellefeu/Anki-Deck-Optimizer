@@ -285,24 +285,12 @@ It rewrites, re-verifies, and comes back to you. Repeat until you are happy, the
 
 ---
 
-## PART 6 — AFTER EVERY MODULE IS DONE
-
-Run this **once**, at the very end, after everything is built, verified and passed:
-
-```
-Read scripts/PROMPT_dedupe.md and execute it.
-```
-
-Duplicates between decks cannot be found one module at a time — that is exactly why this
-is a separate, final step.
-
----
-
-## PART 7 — GRADING A DECK YOURSELF (optional but worth it)
+## PART 6 — GRADING A DECK YOURSELF (optional but HIGHLY recommended)
 
 If you want a hard look at whether a finished deck is actually better than what you
-started with, paste this into a fresh session:
+started with, OR if you just want to grade a newly-made deck, paste ONE of these into a fresh session (**just replace the module name with your deck name**):
 
+**Compare Original Deck to Final Deck**
 ```
 Compare COMPLETED/<module>/<module> (FINAL).apkg against the original in Anki Decks/ (or
 its archived copy). Be objective, be subjective, and be extremely critical of clinical
@@ -318,6 +306,21 @@ anything the rebuild lost that the original had. I need this to be a gold-standa
 End with a copy-pasteable list of specific fixes.
 ```
 
+**Just Grade your NEW Anki Deck**
+```
+Grade COMPLETED/<module>/<module> (FINAL).apkg against the source material in
+Source Files/<module>/. There is no prior deck — this was built from scratch.
+
+Read COMPLETED/EXAMPLE/README.md first so you know what the audit trail contains,
+then work from COMPLETED/<module>/audit/ — ops.json for what was created,
+changelog.json for why, meta.json for what was left outstanding.
+
+Report: total cards created; the multi-cloze rate; every factual claim you can
+check against the source material and whether it holds; any source content that
+was missed entirely. I need this to be a gold-standard deck.
+End with a copy-pasteable list of specific fixes.
+```
+
 Then feed its own list back to it:
 
 ```
@@ -325,6 +328,19 @@ Fix the final deck with those suggestions and give me the updated .apkg to impor
 
 [paste the fix list here]
 ```
+
+---
+
+## PART 7 — AFTER EVERY MODULE IS DONE
+
+Run this **once**, at the very end, after everything is built, verified and passed:
+
+```
+Read scripts/PROMPT_dedupe.md and execute it.
+```
+
+Duplicates between decks cannot be found one module at a time — that is exactly why this
+is a separate, final step.
 
 ---
 
