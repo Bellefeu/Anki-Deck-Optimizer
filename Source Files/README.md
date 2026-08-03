@@ -1,6 +1,6 @@
-# Source Files — your captured course modules go here
+# Source Files — your captured files go here
 
-One **folder per module**, named exactly how you want the module named everywhere
+One **folder per file group**, named exactly how you want the module named everywhere
 downstream. Inside it, the PDF captures for that module — as many as it took, in any
 order; `extract_source.py` sorts them naturally.
 
