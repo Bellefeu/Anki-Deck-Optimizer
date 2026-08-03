@@ -1,0 +1,25 @@
+# Line endings.
+#
+# Without this, a clone on Windows can convert setup.sh to CRLF, and bash then
+# fails with a confusing "\r: command not found" or "bad interpreter". Anyone
+# using WSL would hit it immediately. Shell scripts and Python must stay LF.
+
+* text=auto eol=lf
+
+*.sh    text eol=lf
+*.py    text eol=lf
+*.js    text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+.gitignore     text eol=lf
+.gitattributes text eol=lf
+
+# PowerShell is happiest with CRLF on Windows.
+*.ps1   text eol=crlf
+
+# Never touch these if they ever appear locally.
+*.apkg  binary
+*.pdf   binary
+*.docx  binary
+*.png   binary
+*.jpg   binary

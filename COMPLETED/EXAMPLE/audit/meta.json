@@ -1,0 +1,11 @@
+{
+  "outstanding": [
+    "Card count reconciliation: 40 original - 2 structurally removed + 6 new = 44. One split produced two replacement notes; nothing was deleted outright except nid 1700000000005.",
+    "IO-01 needs a figure the operator must supply; the source figure is a visual reference only and must never go into a card."
+  ],
+  "gaps_filled": [
+    "Example topic A - not present in the original deck at all",
+    "Example topic B - present but tested the wrong half of the fact"
+  ],
+  "summary": "Example module: 40 -> 44 cards, 5 ops, 2 gap-fill cards. Multi-cloze rate 12%. Demonstrates every op type."
+}

@@ -1,0 +1,65 @@
+# ==========================================================================
+#  ALLOWLIST, not a denylist.
+#
+#  Everything is ignored by default; only the tooling is added back. A
+#  denylist fails open - one unmatched pattern and 75 MB of paid course
+#  captures are in a commit and in the history forever. This direction fails
+#  closed: a new file is invisible until someone deliberately un-ignores it.
+#
+#  If you add a file and git does not see it, that is this file working.
+#  Check with:  git check-ignore -v <path>
+# ==========================================================================
+
+*
+
+# --- the tooling ---------------------------------------------------------
+!.gitignore
+!.gitattributes
+!README.md
+!START_HERE.md
+!setup.sh
+!setup.ps1
+!PROFILE.md
+!LICENSE
+!scripts/
+!scripts/*.py
+!scripts/*.js
+!scripts/*.md
+!scripts/VERSION.json
+!scripts/project_state.json
+
+# --- folder skeleton, so a clone has the right shape ---------------------
+!Source Files/
+!Anki Decks/
+!COMPLETED/
+!work/
+!*/.gitkeep
+!Source Files/README.md
+!Anki Decks/README.md
+!COMPLETED/README.md
+
+# --- the redacted worked example (invented content, safe to publish) -----
+!COMPLETED/EXAMPLE/
+!COMPLETED/EXAMPLE/**
+
+# --- never, under any circumstances --------------------------------------
+#  Belt and braces. The bare `*` above already covers these; they are spelled
+#  out so the intent survives someone loosening a rule later.
+*.pdf
+*.apkg
+*.docx
+*.png
+*.jpg
+*.jpeg
+*.gdoc
+work/**
+scripts/_out/
+scripts/work/
+scripts/__pycache__/
+**/__pycache__/
+*.pyc
+.DS_Store
+
+# The one exception to the blanket *.json ignore is handled above by naming
+# project_state.json and VERSION.json explicitly. Audit JSON from a real run
+# stays out - it quotes card text.

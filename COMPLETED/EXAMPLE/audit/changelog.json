@@ -1,0 +1,32 @@
+[
+ [
+  "EDIT",
+  1700000000001,
+  "Cloze added to an untested fact (Rule 2)."
+ ],
+ [
+  "REWRITE",
+  1700000000002,
+  "Depth given its landmark; units moved outside the cloze (Rules 3, 13)."
+ ],
+ [
+  "SPLIT",
+  1700000000003,
+  "One card asking three independent items split into three (Rule 1)."
+ ],
+ [
+  "DEMOTE",
+  1700000000004,
+  "Unconfirmed depth moved to Extra and logged for verification (Rule 13)."
+ ],
+ [
+  "DELETE",
+  1700000000005,
+  "Verbatim duplicate with no discriminating cue (Rule 0)."
+ ],
+ [
+  "ADD",
+  null,
+  "Two gap-fill cards written after checking the claim index (Rule 10)."
+ ]
+]

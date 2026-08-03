@@ -1,0 +1,65 @@
+{
+  "source": "Source Files/EXAMPLE MODULE",
+  "pdf_count": 5,
+  "pdf_pages": 12,
+  "ocr_used": true,
+  "content": "work/EXAMPLE MODULE/apex/content_ocr.txt",
+  "course_pages_found": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+  ],
+  "course_pages_total": 12,
+  "course_pages_missing": [],
+  "coverage_mode": "strict",
+  "ocr_dpi": 150,
+  "conf_ok": 60.0,
+  "pages_analysed": 12,
+  "pages_read_whole": [
+    "p03-1.png"
+  ],
+  "unaccounted_ink_px": 0,
+  "visual_tokens_baseline": 32568,
+  "visual_tokens_plan": 12994,
+  "visual_tokens_numbers": 1518,
+  "read_targets": [
+    "work/EXAMPLE MODULE/apex/read/p01-001-sheet.png",
+    "..."
+  ],
+  "verify_targets": [
+    "work/EXAMPLE MODULE/apex/read/p01-001-numbers.png",
+    "..."
+  ],
+  "page_stats": [
+    {
+      "img": "p01-1.png",
+      "mode": "sheet",
+      "page_px": [
+        1275,
+        1651
+      ],
+      "page_tokens_if_read_whole": 2714,
+      "sheet_tokens": 1334,
+      "numbers_tokens": 138,
+      "bands": 7,
+      "num_bands": 2,
+      "band_px": 770,
+      "words_total": 200,
+      "words_low_conf": 21,
+      "words_numeric": 7,
+      "informative_ink_px": 38957,
+      "furniture_px": 2262,
+      "furniture_frac": 0.058,
+      "unaccounted_ink_px": 0
+    }
+  ]
+}

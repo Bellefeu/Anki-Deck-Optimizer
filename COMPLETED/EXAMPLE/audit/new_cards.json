@@ -1,0 +1,10 @@
+[
+ {
+  "text": "The example landmark lies {{c1::medial}} to the reference structure.",
+  "extra": "Direction verified against a technique description, per Rule 13."
+ },
+ {
+  "text": "The example dose is {{c1::0.5}} mg/kg of the example drug.",
+  "extra": "Rule 13 - a dose names its drug and concentration. Arithmetic cross-checked against every other volume card for this block."
+ }
+]

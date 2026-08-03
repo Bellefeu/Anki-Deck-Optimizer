@@ -1,0 +1,32 @@
+{
+  "source_label": "EXAMPLE MODULE",
+  "source_pages": 12,
+  "ocr_used": true,
+  "cards_before": 40,
+  "cards_after": 44,
+  "verify_items": [
+    [
+      "Depths",
+      "3-6 cm, 12 mm",
+      "OCR misreads digits and en-dashes; both came from a page with a low-confidence numeric line."
+    ],
+    [
+      "Doses",
+      "0.5 mg/kg",
+      "Confirm against a second source before trusting an OCR-derived dose."
+    ]
+  ],
+  "io": [
+    {
+      "id": "IO-01",
+      "file": "IO-01_example.png",
+      "page": 7,
+      "priority": "HIGH",
+      "topic": "Example cross-sectional view",
+      "tests": "Recognising the arrangement in an image and naming each component.",
+      "whyImage": "The text card already states the three components. What text cannot train is picking the arrangement out of a grey-scale image under time pressure - pure pattern recognition.",
+      "occlude": "Occlude each component separately, then the bony landmark.",
+      "labels": "Component A - Component B - Component C - Bony landmark"
+    }
+  ]
+}

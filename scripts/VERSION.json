@@ -1,0 +1,28 @@
+{
+ "version": "295ec5efdd7f",
+ "files": {
+  "deps.py": "4c25e0a040c89566",
+  "build_queue.py": "8fd40be5a1b1ea2b",
+  "extract_apex.py": "7f4cfb7f47094418",
+  "build_deck.py": "eea2e19b343b5355",
+  "update_handoff.py": "d7d16cc6393f5451",
+  "verify_deck.py": "fff88f4a871d9d82",
+  "verify_corpus.py": "dcced5f202161098",
+  "find_duplicates.py": "c03cf5294279d017",
+  "cleanup.py": "612f18a1510fed5e",
+  "archive_inputs.py": "7530bbadc2b5b217",
+  "selftest.py": "7f6bf7de165b3fa4",
+  "check_consistency.py": "6407726fdc2b5cb3",
+  "handoff.py": "46f4e2bb1e12e178",
+  "deck_digest.py": "6125eea62969a7fb",
+  "build_notes.js": "c4b4f09eb98c74dc",
+  "handoff_template.md": "c76036eaa3c500c4",
+  "handoff_reference_template.md": "cbf277423aa78725",
+  "PROMPT_build.md": "b1bb2536b83c074f",
+  "PROMPT_verify.md": "99548147c761afe8",
+  "PROMPT_patch.md": "dda13377d0662388",
+  "PROMPT_dedupe.md": "c2514a5b27e43230",
+  "PROMPT_auto.md": "a9e7aeadc3be2d6b",
+  "next_action.py": "f543ce15411977f7"
+ }
+}

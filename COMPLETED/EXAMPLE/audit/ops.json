@@ -1,0 +1,42 @@
+[
+ {
+  "nid": 1700000000001,
+  "op": "edit",
+  "find": "The nerve exits at L4.",
+  "replace": "The nerve exits at {{c1::L4}}.",
+  "why": "Rule 2 - the fact was stated but never tested."
+ },
+ {
+  "nid": 1700000000002,
+  "op": "rewrite",
+  "text": "The widest part of the example structure measures {{c1::3 to 6}} cm from the skin.",
+  "extra": "Measured from the <b>skin surface</b> at the mid-axillary line.<br><br>Depth varies with body habitus; the range is for an average adult.",
+  "why": "Rule 13 - depth card had no landmark and no units outside the cloze."
+ },
+ {
+  "nid": 1700000000003,
+  "op": "split",
+  "into": [
+   {
+    "text": "The first example layer is the {{c1::superficial}} layer.",
+    "extra": "One of three layers, numbered superficial to deep."
+   },
+   {
+    "text": "The second example layer is the {{c1::intermediate}} layer.",
+    "extra": "One of three layers, numbered superficial to deep."
+   }
+  ],
+  "why": "Rule 1 - one card asked for three independent items; failing it meant blanking one, not not knowing the concept."
+ },
+ {
+  "nid": 1700000000004,
+  "op": "demote",
+  "extra": "Reported as approximately 12 mm, but this could not be confirmed against a technique description.",
+  "why": "Rule 13 - unverifiable depth. An unverified anatomy fact is a gap; an unverified needle depth is a hazard. Logged in verify_items."
+ },
+ {
+  "nid": 1700000000005,
+  "op": "delete",
+  "why": "Rule 0 - restates the card above it verbatim with no discriminating cue. Duplicate, not a near-miss."
+ }
+]
