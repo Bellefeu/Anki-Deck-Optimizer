@@ -52,13 +52,13 @@ How to open the terminal to your folder:
 Once your terminal is in the right place, copy and paste the command for your operating system to start the installation:
 
 macOS or Linux
-Bash
+(Bash)
 ```
 bash setup.sh
 ```
 
 Windows
-PowerShell
+(PowerShell)
 ```
 .\setup.ps1
 ```
@@ -278,7 +278,7 @@ Do not pass. Say exactly what is wrong, then point it at the patch prompt:
 ```
 
 ```
-Example: `"Card 12 is factually incorrect, the tidal volume should be 500ml, not 50ml. Now read scripts/PROMPT_patch.md and execute it."*
+Example: `"Card 12 is factually incorrect, the tidal volume should be 500ml, not 50ml. Now read scripts/PROMPT_patch.md and execute it."
 ```
 
 It rewrites, re-verifies, and comes back to you. Repeat until you are happy, then pass.
