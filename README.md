@@ -49,7 +49,7 @@ Then hand your agent `scripts/PROMPT_build.md`.
 setup.sh / setup.ps1       one-command install. Run this first.
 START_HERE.md              stepwise walkthrough. Start with this.
 PROFILE.md                 your preferences. Not the pipeline's rules.
-Source Files/          input: one folder of captures per module
+Source Files/              input: one folder of captures per module
 Anki Decks/                input: one .apkg per module
 COMPLETED/                 output: one folder per finished module
   EXAMPLE/                 a redacted audit trail - read this first

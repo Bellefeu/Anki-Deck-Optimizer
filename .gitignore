@@ -53,6 +53,7 @@
 *.jpeg
 *.gdoc
 work/**
+!work/.gitkeep
 scripts/_out/
 scripts/work/
 scripts/__pycache__/
