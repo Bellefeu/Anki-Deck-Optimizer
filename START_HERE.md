@@ -36,23 +36,31 @@ no work to do". The scripts warn you about this, but know it going in.
 
 ### 2. Run the installer
 
-Open a terminal **in the project folder** and run one line.
+First, you need to open a terminal inside the project folder.
 
-**macOS or Linux**
+How to open the terminal to your folder:
 
+- macOS: Open the Terminal app, type cd  (make sure to include the space), drag the project folder from Finder directly into the terminal window, and press Enter.
+
+- Windows: Open the project folder in File Explorer, click the address bar at the very top, type cmd (or powershell), and press Enter.
+
+- Linux: Right-click anywhere inside the project folder and select Open in Terminal.
+
+Once your terminal is in the right place, copy and paste the command for your operating system to start the installation:
+
+macOS or Linux
 ```
+Bash
 bash setup.sh
 ```
 
-**Windows**
-
+Windows
 ```
+PowerShell
 .\setup.ps1
 ```
 
-That is it. It works out what you are missing — Python, poppler, tesseract, Node — and
-installs only those. If you already have everything it skips straight through. It is safe
-to run again any time.
+That's it! The installer will figure out what you are missing—Python, Poppler, Tesseract, Node—and install only those. If you already have everything, it skips straight through. It is safe to run this script again at any time.
 
 A few things worth knowing:
 
