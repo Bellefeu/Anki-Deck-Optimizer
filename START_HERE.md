@@ -124,6 +124,9 @@ assumes Claude can see it.
 
 Two folders, two things to drop in. Names must match.
 
+- You are also allowed to just drop in an Anki deck to optimize.
+- Or, just a source folder with files to create a brand new Anki deck.
+
 ### Source captures → `Source Files/<module name>/`
 
 **Note:** Text files are cheap. PDFs without text layers and images are VERY expensive.
