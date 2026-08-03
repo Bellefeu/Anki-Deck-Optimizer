@@ -155,19 +155,19 @@ Stage as many modules as you like before starting.
 
 Set it running and read the results later.
 
-### Set up the scheduled task, once
+### Set up the scheduled task. You must do this every evening, to preserve the 8-hour time encoding (if you want that)
 
 In a **fresh Cowork chat**, paste this. Replace the folder path with yours.
 
-> Please create a new scheduled task with the following exact specifications:
+> - Please create a new scheduled task with the following exact specifications:
 >
-> Name: Auto anki optimize
-> Description: Automatically build and verify/patch all queued decks via PROMPT_auto.md
-> Prompt: Read scripts/PROMPT_auto.md and execute it.
-> Repeats: Every 1 hour, turning itself off automatically 8 hours after it starts.
-> Approvals: Skip all approvals.
-> Folder: /full/path/to/your/project/folder
-> Conditions: Scheduled tasks run even when the computer is asleep and offline.
+> - Name: Auto anki optimize
+> - Description: Automatically build and verify/patch all queued decks via PROMPT_auto.md
+> - Prompt: Read scripts/PROMPT_auto.md and execute it.
+> - Repeats: Every 1 hour, turning itself off automatically 8 hours after it starts.
+> - Approvals: Skip all approvals.
+> - Folder: /full/path/to/your/project/folder
+> - Conditions: Scheduled tasks run even when the computer is asleep and offline.
 
 ### Then
 
