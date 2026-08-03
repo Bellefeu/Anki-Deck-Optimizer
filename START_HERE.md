@@ -195,7 +195,8 @@ For each finished module, open `COMPLETED/<module>/<module> (NOTES).docx` and re
 **JUDGEMENT CALLS** section. That is where content decisions landed. It takes about thirty
 seconds per module and it is the last real check against losing information.
 
-Happy with it? In a new session:
+Happy with it? Paste this below, in a new session, just remember to **change the name of the module to yours!**
+
 
 ```
 Approved. Pass it. Run: python3 scripts/verify_deck.py --pass "Airway Anatomy and Management"
