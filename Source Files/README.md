@@ -47,5 +47,5 @@ reliable for free.
 
 ---
 
-These captures are your own course material. Nothing in this folder is tracked by git —
+These captures are your own personal materials. Nothing in this folder is tracked by git —
 see `.gitignore` in the project root.
