@@ -134,20 +134,37 @@ Two folders, two things to drop in. Names must match.
     30+ pages of screenshots without a text layer will be 50-100% of your
     LLM usage limits alone.
 
-- If you are using text documents, upload them directly (doc, ppt, txt, etc).
-- If you are using screenshots, capture the source files as individual PDFs (GoFullPage or similar).
-    - - Capture every page. Do **not** merge the PDFs with an online tool — it destroys the text
-    layer and uploads your course material to a third party.
-One **folder per module**, named
-however you want the module named everywhere else.
+**Supported source file types:**
+
+| Type | What happens | Notes |
+|---|---|---|
+| `.pdf` | Full pipeline: text layer or OCR + coverage gate | Best for page captures (GoFullPage, etc.) |
+| `.jpg`, `.png`, `.gif`, `.bmp`, `.tiff`, `.webp` | Wrapped as PDF, then same pipeline as above | Drop screenshots directly — no conversion needed |
+| `.txt`, `.md`, `.csv` | Read directly as text — cheapest option | Great for transcripts, notes, outlines |
+| `.ppt`, `.pptx`, `.doc`, `.docx` | Claude reads the **text** directly | See note below about images ↓ |
+
+**If your PowerPoint or Word file contains diagrams, figures, or images that need
+to be read:** export it to PDF yourself first (**File → Save As → PDF**, or
+**File → Export → PDF**). This preserves image quality exactly as your application
+renders it — no third-party conversion, no quality loss. Drop the PDF into the
+source folder alongside any other files.
+
+Do **not** use an online converter — it degrades quality and uploads your course
+material to a third party.
+
+If you are using web page screenshots, capture them as individual PDFs
+(GoFullPage or similar). Capture every page. Do **not** merge the PDFs with an
+online tool — it destroys the text layer.
+
+One **folder per module**, named however you want the module named everywhere else.
 
 ```
 Source Files/
   Airway Anatomy and Management/
-    screencapture-...-18_34_13.pdf
-    screencapture-...-18_35_20.pdf
-    doc15-...-22.doc
-    ppt790-...-1.ppt
+    lecture-slides.pdf
+    screencapture-...-18_34_13.png
+    notes.txt
+    extra-diagrams.jpg
 ```
 
 ### Deck → `Anki Decks/<module name>.apkg`

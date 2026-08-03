@@ -130,26 +130,35 @@ def main():
             sys.exit(f"ERROR: {lbl} folder not found: {d}")
         warn_if_maybe_dehydrated(d, f"{lbl} folder")
 
-    # A source is EITHER a single .pdf OR a folder of capture PDFs.
-    # extract_source.py accepts both; the queue must too, or a folder of captures
-    # silently downgrades the module to optimize-only and skips gap-fill.
-    pdfs = {}
+    # A source is EITHER a single .pdf OR a folder of supported source files
+    # (PDFs, images, text). extract_source.py handles conversion of non-PDFs;
+    # the queue must recognise their folders or they silently downgrade to
+    # optimize-only and skip gap-fill.
+    SOURCE_EXTS = {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff",
+                   ".tif", ".webp", ".txt", ".md", ".csv", ".rtf"}
+    def has_sources(d):
+        """True if a directory contains at least one supported source file."""
+        return any(os.path.splitext(f)[1].lower() in SOURCE_EXTS
+                   for f in os.listdir(d) if os.path.isfile(os.path.join(d, f)))
+
+    sources = {}
     for f in os.listdir(pdf_dir):
         p = os.path.join(pdf_dir, f)
-        if f.lower().endswith(".pdf"):
-            pdfs[normalize(f)] = p
-        elif os.path.isdir(p) and glob.glob(os.path.join(p, "*.pdf")):
-            pdfs[normalize(f)] = p
+        ext = os.path.splitext(f)[1].lower()
+        if ext == ".pdf":
+            sources[normalize(f)] = p
+        elif os.path.isdir(p) and has_sources(p):
+            sources[normalize(f)] = p
     decks = {normalize(f): os.path.join(deck_dir, f)
              for f in os.listdir(deck_dir) if f.lower().endswith(".apkg")}
 
-    matched   = sorted(set(pdfs) & set(decks))
-    pdf_only  = sorted(set(pdfs) - set(decks))
-    deck_only = sorted(set(decks) - set(pdfs))
+    matched   = sorted(set(sources) & set(decks))
+    src_only  = sorted(set(sources) - set(decks))
+    deck_only = sorted(set(decks) - set(sources))
 
-    print(f"PDFs found:  {len(pdfs)}")
-    print(f"Decks found: {len(decks)}")
-    print(f"PAIRED:      {len(matched)}\n")
+    print(f"Sources found: {len(sources)}")
+    print(f"Decks found:   {len(decks)}")
+    print(f"PAIRED:        {len(matched)}\n")
 
     with open(STATE, encoding="utf-8") as f:
         st = json.load(f)
@@ -182,7 +191,7 @@ def main():
         print(f"  OK  {pretty:<38} deck_id={did}  cards={n}{tag}")
 
     for key in matched:
-        add(key, decks[key], pdfs[key], "full")
+        add(key, decks[key], sources[key], "full")
 
     # A deck with no source module still needs passes 1, 2 and 4. These are often the
     # OLDEST decks - the ones most in need of restructuring. Never drop them.
@@ -229,9 +238,9 @@ def main():
     print(f"\nCOMPLETED recorded as: {st['paths']['completed']}"
           + ("" if os.path.isdir(completed) else "   !! does not exist yet"))
 
-    if pdf_only:
-        print("\n!! PDFs with no matching deck - these will NOT be processed:")
-        for k in pdf_only: print(f"   {os.path.basename(pdfs[k])}")
+    if src_only:
+        print("\n!! Sources with no matching deck - these will NOT be processed:")
+        for k in src_only: print(f"   {os.path.basename(sources[k])}")
         print("   Either the deck is missing or the filenames do not match.")
 
     n_opt = sum(1 for m in queue if m.get("mode") == "optimize-only")

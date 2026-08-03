@@ -59,15 +59,19 @@ Do not proceed if selftest fails.
 python3 build_queue.py "<local>/Source Files" "<local>/Anki Decks"
 ```
 
-Report: module name, deck_id, card count, mode, any unpaired PDFs. A deck with no
+Report: module name, deck_id, card count, mode, any unpaired sources. A deck with no
 matching source is queued `optimize-only` — that is correct, not an error. Stop and say
 so if nothing queued.
 
 ## STEP 2 — EXTRACT (skip if optimize-only)
 
 ```bash
-python3 extract_source.py "<module .pdf or folder>" "work/<module>/source"
+python3 extract_source.py "<module source folder or .pdf>" "work/<module>/source"
 ```
+
+The extractor handles mixed source folders: PDFs go through the full OCR/coverage
+pipeline, standalone images (.jpg, .png, etc.) are wrapped in PDFs then processed
+identically, and text files (.txt, .md, .csv) are read directly.
 
 Report `ocr_used`, `course_pages_missing`, `unaccounted_ink_px`, and the visual-token
 line from the read plan.

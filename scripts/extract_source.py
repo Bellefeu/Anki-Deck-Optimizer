@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 """Inspect course module source and extract its content the best way available.
 
-Accepts EITHER a single PDF or a FOLDER of PDFs. If you captured a module as
+Accepts a single PDF, a FOLDER of PDFs, or a FOLDER containing any mix of
+supported source files (PDFs, images, text files). If you captured a module as
 several GoFullPage exports (one per sub-module), just put them in a folder named
 for the module - do NOT merge them with an online tool. Merging through a cloud
 service re-encodes the file, usually destroys the text layer, and uploads
 copyrighted material to a third party. (Verified: the iLovePDF-merged
 `Truncal.pdf` in the archive has a zero-word text layer, exactly like its
 un-merged inputs. Merging rasters produces rasters.)
+
+Supported source file types:
+  - PDFs (.pdf)              -> existing pipeline (text layer or OCR)
+  - Images (.jpg .png .gif   -> wrapped in a single-page PDF via Pillow,
+    .bmp .tiff .webp)           then processed through OCR/coverage pipeline.
+                                Transparent PNGs are composited onto white.
+  - Text files (.txt .md     -> read directly into content.txt, no OCR needed.
+    .csv .rtf)
 
 Handles all three source shapes:
   1. Real text layer            -> extract text directly. NO OCR. Numbers exact.
@@ -20,33 +29,32 @@ picks up where it stopped - Cowork kills long-running shell processes.
 COMPLETENESS GATE: reads "Page N of M" footers and reports any missing pages,
 so a partial capture is caught before any cards get written.
 
-
-COVERAGE GATE  (the token optimisation, and why it is not a gamble)
--------------------------------------------------------------------
+COVERAGE GATE
+-------------
 GoFullPage captures are always 100% raster, so OCR always runs and the prose is
 always available as exact text. Re-sending those same prose pixels to be read
 visually is the largest single cost in the pipeline and buys nothing.
-
-So every page is decomposed and every informative ink pixel is proved to be in
-exactly one of two buckets:
-
-  A. inside a high-confidence OCR word box  -> the text is already held exactly
-  B. everything else                        -> goes on the visual read list
 
 Bucket B is: figures, diagrams, icons, collapsed-accordion controls, rules,
 anything OCR read with low confidence, and - unconditionally - every token
 containing a digit, a roman numeral, a dash, a percent or a unit, because
 tesseract's confidence is least trustworthy exactly where Rule 9 cares most.
 
-`unaccounted_ink_px` is computed per page and MUST be 0. It is 0 by
-construction: whatever pass 1 does not group into a band, pass 2 sweeps up.
-Nothing is dropped on a heuristic. A page whose coverage cannot be proved, or
-whose bucket B is large enough that banding saves little, is read whole - every
-branch fails toward MORE reading, never less.
+All of this is proved, not guessed: `unaccounted_ink_px` is reported per page
+and must be 0 or the page is promoted to a whole-page read.
 
-Bucket B ships as ONE composed image per page: the page's full width, with the
-y-bands that need eyes stacked in reading order and a marker rule where prose
-was elided. Same dpi as the OCR raster - **no resolution is ever traded away** -
+The coverage gate applies identically to stripped bands - the composed sheet
+carries the same retained regions at the same dpi as the source, just without
+the elided prose in between. Every figure, every icon, every ambiguous glyph is
+visually available to the session. Only the prose whose text is already held
+exactly is omitted.
+
+Strip processing  (GoFullPage tall captures)
+---------------------------------------------
+A GoFullPage capture of a scrollable page is a single extremely tall image. At
+OCR resolution the full-page image can exceed tesseract's memory limit, so the
+strip pipeline slices it into STRIP_HEIGHT-px strips with STRIP_OVERLAP-px
+overlap and OCRs each one independently. Banding then operates per strip in the
 same reading order, one image per page as before.
 
 Usage:
@@ -75,6 +83,10 @@ STRIP_HEIGHT, STRIP_OVERLAP, TALL_RATIO = 1600, 120, 3.0
 OCR_DPI  = int(os.environ.get("OCR_DPI", "150"))
 CONF_OK  = float(os.environ.get("CONF_OK", "60"))
 COVERAGE = os.environ.get("COVERAGE", "strict").lower()
+
+# Supported non-PDF source file types. PDFs are always accepted.
+IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".webp"}
+TEXT_EXTS  = {".txt", ".md", ".csv", ".rtf"}
 
 INK_LEVEL   = 238    # <= this grey value counts as ink
 EDGE_LEVEL  = 24     # local gradient above which a pixel is textured (glyph/art)
@@ -119,13 +131,83 @@ def natural_key(s):
     return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", s)]
 
 
-def collect_pdfs(src):
-    if os.path.isdir(src):
-        pdfs = sorted(glob.glob(os.path.join(src, "*.pdf")), key=natural_key)
-        if not pdfs:
-            sys.exit(f"No PDFs in folder: {src}")
-        return pdfs
-    return [src]
+def image_to_pdf(img_path, out_dir):
+    """Wrap a standalone image in a single-page PDF for the OCR pipeline.
+
+    Lossless: exact pixels, no re-encoding, native resolution preserved.
+    Transparent PNGs are composited onto a white canvas so OCR sees dark
+    text on white, not dark text on black."""
+    im = Image.open(img_path)
+    # Prevent transparent backgrounds from turning black on convert('RGB')
+    if im.mode in ('RGBA', 'LA') or (im.mode == 'P' and 'transparency' in im.info):
+        alpha = im.convert('RGBA').split()[-1]
+        bg = Image.new('RGB', im.size, (255, 255, 255))
+        bg.paste(im, mask=alpha)
+        im = bg
+    else:
+        im = im.convert("RGB")
+    stem = os.path.splitext(os.path.basename(img_path))[0]
+    pdf_path = os.path.join(out_dir, f"{stem}.pdf")
+    if not os.path.exists(pdf_path):
+        # 300 DPI fallback is safer for OCR than 150 when native DPI is unknown
+        dpi = im.info.get("dpi", (300, 300))
+        if isinstance(dpi, tuple):
+            dpi = dpi[0]
+        im.save(pdf_path, "PDF", resolution=dpi)
+    return pdf_path
+
+
+def collect_sources(src):
+    """Collect all supported source files. Returns (pdf_list, text_parts).
+
+    - PDFs are returned as-is.
+    - Images (.jpg, .png, etc.) are wrapped in single-page PDFs and added
+      to the PDF list for processing through the OCR/coverage pipeline.
+    - Text files (.txt, .md, .csv) are read directly and returned as text.
+
+    For backwards compatibility, also accepts a single PDF file path."""
+    if not os.path.isdir(src):
+        # Single file path - must be a PDF (original behaviour)
+        return [src], []
+
+    convert_dir = os.path.join(src, ".converted")
+    pdfs, text_parts = [], []
+    images_found, texts_found = 0, 0
+
+    for f in sorted(os.listdir(src), key=natural_key):
+        p = os.path.join(src, f)
+        if not os.path.isfile(p):
+            continue
+        ext = os.path.splitext(f)[1].lower()
+
+        if ext == ".pdf":
+            pdfs.append(p)
+        elif ext in IMAGE_EXTS:
+            os.makedirs(convert_dir, exist_ok=True)
+            pdf = image_to_pdf(p, convert_dir)
+            pdfs.append(pdf)
+            images_found += 1
+            print(f"  [convert] {f} -> {os.path.basename(pdf)}")
+        elif ext in TEXT_EXTS:
+            try:
+                text = open(p, encoding="utf-8", errors="replace").read()
+                text_parts.append(f"\n--- {f} ---\n{text}")
+                texts_found += 1
+                print(f"  [text]    {f} ({len(text.split())} words)")
+            except Exception as e:
+                print(f"  !! could not read {f}: {e}")
+
+    if not pdfs and not text_parts:
+        sys.exit(f"No supported source files in folder: {src}\n"
+                 f"  Supported: .pdf, {' '.join(sorted(IMAGE_EXTS))}, "
+                 f"{' '.join(sorted(TEXT_EXTS))}")
+
+    if images_found:
+        print(f"  {images_found} image(s) wrapped as PDF for OCR pipeline")
+    if texts_found:
+        print(f"  {texts_found} text file(s) read directly")
+
+    return sorted(pdfs, key=natural_key), text_parts
 
 
 def pdf_info(p):
@@ -533,9 +615,11 @@ def main():
     man.setdefault("plans", {})
     def save(): json.dump(man, open(mpath, "w"), indent=1)
 
-    pdfs = collect_pdfs(src)
-    print(f"=== SOURCE: {len(pdfs)} PDF(s) ===")
-    for p in pdfs: print(f"  {os.path.basename(p)}")
+    print("=== COLLECTING SOURCES ===")
+    pdfs, text_parts = collect_sources(src)
+    if pdfs:
+        print(f"\n=== SOURCE: {len(pdfs)} PDF(s) ===")
+        for p in pdfs: print(f"  {os.path.basename(p)}")
 
     all_text, ocr_used, total_pages = [], False, 0
     pages_dir = os.path.join(outdir, "pages"); os.makedirs(pages_dir, exist_ok=True)
@@ -611,6 +695,9 @@ def main():
     # module's content and makes two extractions of one capture non-comparable.
     for part in sorted(man["parts"], key=lambda x: natural_key(x["img"])):
         all_text.append(f"\n--- {os.path.basename(part['img'])} ---\n{part['text']}")
+
+    # Append any text files that were read directly (not OCR'd)
+    all_text.extend(text_parts)
 
     joined = "".join(all_text)
     content = os.path.join(outdir, "content_ocr.txt" if ocr_used else "content.txt")
