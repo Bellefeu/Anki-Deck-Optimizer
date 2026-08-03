@@ -157,7 +157,9 @@ Set it running and read the results later.
 
 ### Set up the scheduled task. You must do this every evening, to preserve the 8-hour time encoding (if you want that)
 
-In a **fresh Cowork chat**, paste this. Replace the folder path with yours.
+In a **fresh Cowork chat**, paste this. **Replace the folder path with yours.**
+
+I repeat.... **Replace the folder path with yours.**
 
 ```
 - Please create a new scheduled task with the following exact specifications:
