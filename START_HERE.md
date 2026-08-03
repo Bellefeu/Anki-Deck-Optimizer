@@ -17,6 +17,10 @@ Everything is laid out for you here, just follow instructions slowly, with lots 
 
 Clone or download the repo. Anywhere is fine — Desktop, Documents, a Dropbox folder.
 
+Q: How do I download this "repo", and what is a "repo"?
+A: Repository, the term for all GitHub projects. 
+- If you are reading this on GitHub, click the green Code button at the top right, then click Download ZIP, and extract the folder. Save it anywhere on your computer, somewhere you know where it is.
+
 **One rule: it must be on your actual hard drive, not a cloud-only folder.** The pipeline
 uses SQLite, and SQLite cannot write to a Google Drive / iCloud / OneDrive mount — every
 write throws `disk I/O error`. This is not a bug in the scripts and there is no way around
@@ -40,7 +44,7 @@ First, you need to open a terminal inside the project folder.
 
 How to open the terminal to your folder:
 
-- macOS: Open the Terminal app, type ```cd ```  (make sure to include the space), drag the project folder from Finder directly into the terminal window, and press Enter.
+- macOS: Open the Terminal app, type ```cd ```  (make sure to keep the space after cd!), then drag the project folder from Finder directly into the terminal window, and press Enter.
 
 - Windows: Open the project folder in File Explorer, click the address bar at the very top, type ```cmd``` (or ```powershell```), and press Enter.
 
@@ -49,14 +53,14 @@ How to open the terminal to your folder:
 Once your terminal is in the right place, copy and paste the command for your operating system to start the installation:
 
 macOS or Linux
-```
 Bash
+```
 bash setup.sh
 ```
 
 Windows
-```
 PowerShell
+```
 .\setup.ps1
 ```
 
@@ -172,6 +176,10 @@ In a **fresh Cowork chat**, paste this. **Replace the folder path with yours.**
 
 I repeat.... **Replace the folder path with yours.**
 
+- Mac: Right-click the folder, hold the Option key, and click "Copy [Folder Name] as Pathname".
+
+- Windows: Right-click the folder and select "Copy as path".
+
 ```
 - Please create a new scheduled task with the following exact specifications:
 
@@ -264,6 +272,10 @@ Do not pass. Say exactly what is wrong, then point it at the patch prompt:
 
 ```
 [Say exactly what you disagree with in the judgement calls.] Now read scripts/PROMPT_patch.md and execute it.
+```
+
+```
+Example: `"Card 12 is factually incorrect, the tidal volume should be 500ml, not 50ml. Now read scripts/PROMPT_patch.md and execute it."*
 ```
 
 It rewrites, re-verifies, and comes back to you. Repeat until you are happy, then pass.
