@@ -3,15 +3,12 @@
   "project": "CRNA Anki Deck Optimization",
   "source_name": "",
   "last_updated": null,
-  "run_count": 0,
   "totals": {
     "modules_complete": 0,
     "modules_verified": 0,
     "cards_before": 0,
     "cards_after": 0
   },
-  "modules": [],
-  "pending_modules": [],
   "environment_findings": [
     "source captures are 100% image, zero text layer - pdftotext returns 0 words",
     "sqlite3 CLI not installed; use Python sqlite3 module",
@@ -73,7 +70,5 @@
     }
   ],
   "session_log": [],
-  "drive": {},
-  "queue_built": false,
-  "paths": {}
+  "drive": {}
 }
