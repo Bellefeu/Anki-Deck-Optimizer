@@ -15,7 +15,7 @@ Source Files/
 
 A single `Module Name.pdf` also works if the whole module fit in one capture.
 
-## Capturing well — this is what limits everything downstream
+## IF you are using captured screenshots, do it well — this is what limits everything downstream
 
 1. **Expand every accordion first.** A full-page capture records only what is rendered.
    A collapsed "References" panel, or any `+` disclosure, contributes its header and
