@@ -66,7 +66,7 @@ scripts/
   selftest.py              ~136 checks. Run in any new environment.
 ```
 
-## The five things that will save you a day each
+## The four things that will save you a day each
 
 1. **SQLite cannot run on a Google Drive / cloud FUSE mount.** Any write throws
    `disk I/O error`. Copy everything to local disk, work there, copy the finished
@@ -84,9 +84,6 @@ scripts/
    changelog is built from the ops, so a direct edit produces counts that do not
    reconcile — and the build fails on that mismatch by design.
 
-5. **Expand every accordion before you capture.** Screen-capture tools record only what
-   is rendered. A collapsed "References" panel contributes its header and nothing else,
-   and nothing downstream can recover text that was never captured.
 
 ## What makes it trustworthy rather than fast
 
