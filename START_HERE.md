@@ -173,7 +173,7 @@ Stage **as many modules as you would like** before starting!
 Set it running and read the results later.
 
 ### Set up the scheduled task. You must do this every evening, to preserve the 8-hour time encoding (optional)
-### You can instead just wake up and cancel it manually, but I highly recommend an automated stop.
+- You can instead just wake up and cancel it manually, but I highly recommend an automated stop.
 
 In a **fresh Cowork chat**, paste this. **Replace the folder path with yours.**
 
