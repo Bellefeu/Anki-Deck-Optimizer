@@ -67,6 +67,9 @@ A few things worth knowing:
 - **If it installs things and the next step still says they are missing:** close the
   terminal, open a new one, and run it again. A terminal that was already open does not
   see newly installed programs.
+- **Run it as `bash setup.sh`, not `./setup.sh`.** macOS ships an ancient bash (3.2, from
+  2007), so the script is written to POSIX rules to stay compatible with it. Invoking it
+  explicitly avoids any question of which shell picks it up.
 
 When it finishes installing it automatically runs the checks and self-tests, and prints
 what to do next.
