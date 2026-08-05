@@ -3,6 +3,11 @@
   "project": "CRNA Anki Deck Optimization",
   "source_name": "",
   "last_updated": null,
+  "run_count": 0,
+  "queue_built": false,
+  "modules": [],
+  "pending_modules": [],
+  "paths": {},
   "totals": {
     "modules_complete": 0,
     "modules_verified": 0,

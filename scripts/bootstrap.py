@@ -120,6 +120,12 @@ def main():
     sp = os.path.join(HERE, "project_state.json")
     try:
         st = json.load(open(sp))
+        from update_handoff import normalize_state
+        added = normalize_state(st)
+        if added:
+            with open(sp, "w", encoding="utf-8") as f:
+                json.dump(st, f, indent=2)
+            say(OK, "initialized missing runtime state", ", ".join(added))
         if st.get("modules") or st.get("run_count"):
             say(WARN, f"state already has {len(st.get('modules', []))} module(s), "
                       f"run_count={st.get('run_count')}",

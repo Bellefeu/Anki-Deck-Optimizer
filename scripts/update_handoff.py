@@ -24,6 +24,34 @@ STATUS_LABEL = {
 }
 
 
+_STATE_DEFAULTS = {
+    "run_count":       lambda: 0,
+    "queue_built":     lambda: False,
+    "modules":         list,
+    "pending_modules": list,
+    "paths":           dict,
+    "session_log":     list,
+}
+
+
+def normalize_state(st):
+    """Add runtime keys missing from an older or freshly unpacked state file.
+
+    This is deliberately additive: an existing value is never replaced, even if
+    it is empty or otherwise surprising. That keeps bootstrap/recording from
+    silently rewriting project history while still making the public seed state
+    safe to use. Returns the keys it added, in deterministic order.
+    """
+    if not isinstance(st, dict):
+        raise TypeError("project_state.json must contain a JSON object")
+    added = []
+    for key, make_default in _STATE_DEFAULTS.items():
+        if key not in st:
+            st[key] = make_default()
+            added.append(key)
+    return added
+
+
 def render_status(st):
     L = []
     L.append("## 7. STATUS — GENERATED, DO NOT HAND-EDIT")
@@ -144,13 +172,18 @@ def recompute_totals(st):
 def regenerate():
     with open(STATE, encoding="utf-8") as f:
         st = json.load(f)
+    added = normalize_state(st)
     # recompute before rendering, and write the corrected state back
     before = json.dumps(st.get("totals"), sort_keys=True)
     recompute_totals(st)
-    if json.dumps(st.get("totals"), sort_keys=True) != before:
+    totals_changed = json.dumps(st.get("totals"), sort_keys=True) != before
+    if added or totals_changed:
         with open(STATE, "w", encoding="utf-8") as f:
             json.dump(st, f, indent=2)
-        print(f"  (totals recomputed: {st['totals']})")
+        if added:
+            print(f"  (initialized missing state: {', '.join(added)})")
+        if totals_changed:
+            print(f"  (totals recomputed: {st['totals']})")
     with open(TEMPLATE, encoding="utf-8") as f:
         tpl = f.read()
 
@@ -207,6 +240,7 @@ def record_run(module_name, deck_id, before, after, added, edited,
     """Called by build_deck.py. Updates state, then regenerates the handoff."""
     with open(STATE, encoding="utf-8") as f:
         st = json.load(f)
+    normalize_state(st)
 
     st["run_count"] += 1
     st["last_updated"] = datetime.date.today().isoformat()
