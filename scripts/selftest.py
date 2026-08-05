@@ -47,9 +47,30 @@ def main():
     except Exception as e:
         check("version manifest readable", False, str(e))
 
+    # ---------- 1c. state schema ----------
+    print("\n--- 1c. Fresh-state schema ---")
+    try:
+        from update_handoff import normalize_state
+        sparse = {"project": "test", "run_count": 7,
+                  "session_log": [{"keep": True}]}
+        added = normalize_state(sparse)
+        check("missing runtime state is initialized",
+              added == ["queue_built", "modules", "pending_modules", "paths"]
+              and sparse["queue_built"] is False
+              and sparse["modules"] == [] and sparse["pending_modules"] == []
+              and sparse["paths"] == {},
+              f"added={added}, state={sparse}")
+        check("existing state history is preserved",
+              sparse["run_count"] == 7 and sparse["session_log"] == [{"keep": True}])
+        before = json.dumps(sparse, sort_keys=True)
+        check("state initialization is idempotent",
+              normalize_state(sparse) == [] and json.dumps(sparse, sort_keys=True) == before)
+    except Exception as e:
+        check("state schema helper imports", False, str(e))
+
     # ---------- 2. required files ----------
     print("\n--- 2. Files present ---")
-    needed = ["deps.py", "extract_source.py", "build_queue.py", "build_deck.py",
+    needed = ["deps.py", "bootstrap.py", "extract_source.py", "build_queue.py", "build_deck.py",
               "update_handoff.py", "verify_deck.py", "verify_corpus.py",
               "find_duplicates.py", "cleanup.py", "archive_inputs.py",
               "check_version.py", "build_notes.js",
@@ -143,6 +164,11 @@ def main():
     os.makedirs(moddir, exist_ok=True)
     try:
         st = dict(state_backup)
+        # Reproduce the public v1.0 seed shape that exposed this regression:
+        # build_deck could finish and write an .apkg, then record_run crashed because
+        # these runtime keys were absent. The real state is restored in `finally`.
+        for key in ("run_count", "queue_built", "modules", "paths"):
+            st.pop(key, None)
         st["pending_modules"] = [{"name": "__selftest__", "deck_id": DID, "apkg": apkg,
                                   "pdf": None, "mode": "optimize-only",
                                   "cards_before": 5, "status": "pending"}]
@@ -181,6 +207,11 @@ def main():
                            capture_output=True, text=True, cwd=HERE, env=env, timeout=180)
         out = r.stdout
         check("build completed", "BUILD OK" in out, out[-400:])
+        recorded = json.load(open(os.path.join(HERE, "project_state.json")))
+        check("build records into legacy sparse state",
+              recorded.get("run_count") == 1
+              and any(m.get("name") == "__selftest__" for m in recorded.get("modules", [])),
+              str(recorded))
         check("split executed",   "split: 1" in out)
         check("rewrite executed", "rewrite: 1" in out)
         check("demote executed",  "demote: 1" in out)
