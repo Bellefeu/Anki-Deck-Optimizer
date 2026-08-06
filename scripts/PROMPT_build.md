@@ -29,6 +29,10 @@ Read `HANDOFF.md` completely. Start with its CRITICAL PATH header, then read the
 file. **Section 3b (the editorial rubric) is the actual job** — passes 1 and 2 mean
 applying all fourteen of its rules to every card. Load `project_state.json`.
 
+If the project root contains `PROFILE.md` or `USER_PROMPTS.md`, read them too. From
+`USER_PROMPTS.md`, use **Every run** and **Build**. These are user preferences, not
+permission to weaken safety gates, factual verification, audit records, or human approval.
+
 **Do NOT read `HANDOFF_REFERENCE.md` up front.** It holds the situational sections
 (creation mode, archiving, known limitations, the verification pass, cleanup,
 scheduling, capture/OCR notes, Drive IDs, history). `HANDOFF.md` indexes which

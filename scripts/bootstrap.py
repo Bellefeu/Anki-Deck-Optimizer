@@ -8,7 +8,7 @@ Idempotent - run it again any time something feels off. It does not touch your
 inputs, your decks, or anything in COMPLETED/.
 """
 
-import os, sys, json, shutil, subprocess
+import os, sys, shutil, subprocess
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -119,13 +119,17 @@ def main():
     print("\n--- 3. Project state ---")
     sp = os.path.join(HERE, "project_state.json")
     try:
-        st = json.load(open(sp))
-        from update_handoff import normalize_state
-        added = normalize_state(st)
-        if added:
-            with open(sp, "w", encoding="utf-8") as f:
-                json.dump(st, f, indent=2)
-            say(OK, "initialized missing runtime state", ", ".join(added))
+        from state_io import (ensure_state, load_state, load_template,
+                              migrate_state, save_state)
+        created = not os.path.exists(sp)
+        ensure_state(sp)
+        st = load_state(sp)
+        migrated, added = migrate_state(st, template=load_template())
+        if created or added:
+            save_state(migrated, sp, backup=not created)
+            st = migrated
+            detail = ", ".join(added) if added else "copied the safe template"
+            say(OK, "initialized missing runtime state", detail)
         if st.get("modules") or st.get("run_count"):
             say(WARN, f"state already has {len(st.get('modules', []))} module(s), "
                       f"run_count={st.get('run_count')}",
@@ -148,7 +152,10 @@ def main():
     if os.path.exists(pf):
         say(OK, "PROFILE.md exists (left alone)")
     else:
-        open(pf, "w", encoding="utf-8").write(PROFILE)
+        template = os.path.join(ROOT, "PROFILE.template.md")
+        from state_io import atomic_write_bytes
+        content = open(template, "rb").read() if os.path.exists(template) else PROFILE.encode("utf-8")
+        atomic_write_bytes(pf, content)
         say(OK, "PROFILE.md created from defaults", "read it and edit before your first run")
 
     # 5. handoff integrity
@@ -206,17 +213,14 @@ def main():
 
     print("""  Next:
 
-    1. Read PROFILE.md and edit it. It is short and it is yours.
-    2. Put a module's GoFullPage PDFs in  Source Files/<module name>/
-       (expand every accordion BEFORE capturing - see that folder's README)
-    3. Put the matching deck in         Anki Decks/<module name>.apkg
-    4. Build the queue:
+    1. Return to the Prism Control Center. If it is not open, double-click:
+         Windows: OPEN_CONTROL_CENTER.cmd
+         Mac:     OPEN_CONTROL_CENTER.command
+    2. Open Prefs, read your profile, and click Save preferences.
+    3. Open Home, enter a module name, and drop in source files and/or an .apkg.
+    4. Follow START_HERE.md to run the pipeline with your agent.
 
-           cd scripts
-           python3 build_queue.py "../Source Files" "../Anki Decks"
-           python3 next_action.py --status
-
-    5. Hand your agent  scripts/PROMPT_build.md  and let it work.
+       Terminal steps are still available in START_HERE.md if you prefer them.
 
   Read first, in this order:
     START_HERE.md                 stepwise walkthrough - every command, in order

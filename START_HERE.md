@@ -11,8 +11,25 @@ Both can read this folder, run the scripts, and follow the prompt files. A norma
 cannot work directly in a folder on your computer. Anything in a grey box is meant to be
 copied exactly.
 
-If you haven't used terminal commands before, it's not as scary as it sounds.
-Everything is laid out for you here, just follow instructions slowly, with lots of copy/paste.
+The easiest path uses the new **Control Center**. It lets you choose the project, run
+setup, drop in files, edit preferences, review finished decks, and install safe updates.
+You do not need to know terminal commands.
+
+### Open the Control Center
+
+- **Windows:** double-click `OPEN_CONTROL_CENTER.cmd`.
+- **Mac:** double-click `OPEN_CONTROL_CENTER.command`. If macOS blocks it, right-click
+  the file, choose **Open**, then choose **Open** again.
+- **Linux:** double-click `open_control_center.sh` and choose **Run**. If your file app
+  opens it as text, right-click it and choose **Run as a Program**.
+
+Your web browser will open a page named **Prism**. Keep the small terminal window open
+while you use it. Prism runs only on your computer. It does not upload your decks to a
+website.
+
+On the first launch, Prism checks for Python. If Python is missing, it opens the guided
+setup first. Follow the words in the terminal. When setup finishes, open the Control
+Center again if it did not open by itself.
 
 ---
 
@@ -43,6 +60,11 @@ An unsynced folder reads as **empty**, not as an error — which looks exactly l
 no work to do". The scripts warn you about this, but know it going in.
 
 ### 2. Run the installer
+
+Open the **Update** page in the Control Center and click **Open guided setup**. Follow the
+words in the terminal window. That is the easiest method.
+
+If the Control Center cannot open yet, use the manual steps below.
 
 First, you need to open a terminal inside the project folder.
 
@@ -101,7 +123,7 @@ The commands below use `python3`. On Windows, use `py` instead if `python3` is n
 ### 3. Confirm it says READY
 
 The installer ends by running `scripts/bootstrap.py`, which checks everything and runs
-141 self-tests.
+more than 140 self-tests.
 
 **It must end with `READY`.** If it says `NOT READY`, it prints exactly what is missing —
 fix that and run the installer again. Do not skip ahead. Every problem it catches is one
@@ -113,11 +135,15 @@ You can re-run the checks alone at any time, without the installer:
 python3 scripts/bootstrap.py
 ```
 
-### 4. Open `PROFILE.md` and edit it
+### 4. Set your preferences
 
-It is one page. It is your preferences — how aggressively to fix errors without asking,
+Open **Prefs** in the Control Center. The left box is your profile: how aggressively to fix errors without asking,
 whether you are keeping your Anki review history, how thorough to be. The defaults are
 sensible; read them once so you know what you agreed to.
+
+The right box is for your own prompt add-ons. Put general preferences under **Every
+run**, or add a note for only Build, Verify, Auto, or the final duplicate check. Click
+**Save preferences**. Updates keep both boxes.
 
 **The one to decide now:** the default **discards your review history**. If you want to
 keep it, change that line before you build anything. It changes how a rebuilt deck must be
@@ -152,6 +178,12 @@ Official OpenAI help: [Quickstart](https://learn.chatgpt.com/docs/quickstart) an
 ## PART 2 — STAGE A MODULE
 
 Two folders, two things to drop in. Names must match.
+
+**Easy way:** open **Home** in the Control Center, type the module name, then drag your
+source files and `.apkg` deck into the two large boxes. The deck is renamed to match the
+module for you. Prism asks before replacing a file with the same name.
+
+You can also place the files into the folders by hand:
 
 - You are also allowed to just drop in an Anki deck to optimize.
 - Or, just a source folder with files to create a brand new Anki deck.
@@ -276,9 +308,9 @@ run tries again. Expect roughly **2–5 hours per deck** including the time betw
 
 ### In the morning
 
-For each finished module, open `COMPLETED/<module>/<module> (NOTES).docx` and read the
-**JUDGEMENT CALLS** section. That is where content decisions landed. It takes about thirty
-seconds per module and it is the last real check against losing information.
+Open **Decks** in the Control Center. Choose **Needs review**, click a deck, then use
+**Open notes** or **Open verification report**. Read the **JUDGEMENT CALLS**. That is where
+content decisions landed. It is the last real check against losing information.
 
 Happy with it? Paste this below, in a new session, just remember to **change the name of the module to yours!**
 
@@ -288,6 +320,27 @@ Approved. Pass it. Run: python3 scripts/verify_deck.py --pass "Airway Anatomy an
 ```
 
 One line per module. Not happy? See **Part 5**.
+
+---
+
+## KEEP THE TOOLKIT UPDATED
+
+Open **Update** in the Control Center and click **Check for updates**. If a stable update
+is ready, click **Install update**.
+
+The patcher follows these rules:
+
+- It replaces only toolkit files listed by the publisher.
+- It never replaces your decks, source files, audit JSON, finished work, profile, prompt
+  add-ons, or verified status.
+- It tests the download before changing live files.
+- It makes a dated backup in `.pipeline_backups`.
+- If a final check fails, it puts the old toolkit and state back automatically.
+- If it finds an unfinished resumable build, it stops and asks you to finish that build
+  first.
+
+The update button uses the latest stable GitHub **Release**. It does not run `git pull`,
+and it does not need you to understand Git.
 
 ---
 

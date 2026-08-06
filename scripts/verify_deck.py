@@ -17,6 +17,7 @@ import sys, os, re, json, zipfile, sqlite3, hashlib, random
 from deps import require
 require("zstandard", quiet=True)
 import zstandard
+from state_io import load_state, save_state
 
 _ENTITY = re.compile(r"&(?:[A-Za-z][A-Za-z0-9]{1,9}|#\d{1,5}|#x[0-9A-Fa-f]{1,5});")
 
@@ -62,13 +63,13 @@ def all_fields(con):
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "--pass":
         name = sys.argv[2]
-        st = json.load(open(STATE))
+        st = load_state(STATE, create=True)
         hit = False
         for m in st["modules"]:
             if m["name"].lower() == name.lower():
                 m["status"] = "verified"; m["outstanding"] = []; hit = True
         if not hit: sys.exit(f"'{name}' not found in state.")
-        json.dump(st, open(STATE, "w"), indent=2)
+        save_state(st, STATE)
         # Regenerating the handoff must never abort the pass. The status flip above is
         # already written; the file moves below are the part that still has to happen.
         try:
@@ -100,7 +101,7 @@ def main():
                 if v:
                     return v
             try:
-                paths = json.load(open(STATE)).get("paths", {})
+                paths = load_state(STATE).get("paths", {})
             except Exception:
                 paths = {}
             for k in ((state_key,) if isinstance(state_key, str) else state_key):

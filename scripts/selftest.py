@@ -8,12 +8,61 @@ problems before they surface halfway through a real module.
     python3 selftest.py
 """
 
-import os, sys, json, shutil, sqlite3, zipfile, subprocess, tempfile, hashlib, re, glob
+import os, sys, json, shutil, sqlite3, zipfile, subprocess, tempfile, hashlib, re, glob, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 PASS, FAIL = [], []
+
+
+def run_isolated():
+    """Run the destructive fixture suite in a private copy of the scripts.
+
+    Older versions temporarily replaced the user's live project_state.json and
+    restored it in `finally`. A power loss or forced process kill could strand
+    the synthetic state. The outer process now copies the toolkit and launches
+    the real suite there, so the live state is never opened for writing.
+    """
+    root = tempfile.mkdtemp(prefix="anki_pipeline_selftest_")
+    scripts = os.path.join(root, "scripts")
+    os.makedirs(scripts, exist_ok=True)
+    try:
+        for name in os.listdir(HERE):
+            source = os.path.join(HERE, name)
+            if not os.path.isfile(source) or name.endswith((".bak", ".pyc")):
+                continue
+            shutil.copy2(source, os.path.join(scripts, name))
+        state = os.path.join(scripts, "project_state.json")
+        if not os.path.exists(state):
+            template = os.path.join(scripts, "project_state.template.json")
+            if not os.path.exists(template):
+                print("SELFTEST ISOLATION FAILED: project_state template is missing")
+                return 1
+            shutil.copy2(template, state)
+        env = dict(os.environ, ANKI_SELFTEST_ISOLATED="1")
+        result = subprocess.run(
+            [sys.executable, os.path.join(scripts, "selftest.py")],
+            cwd=scripts, env=env, text=True, capture_output=True, timeout=360,
+        )
+        sys.stdout.write(result.stdout)
+        sys.stderr.write(result.stderr)
+        return result.returncode
+    except subprocess.TimeoutExpired:
+        print("SELFTEST FAILED: isolated suite exceeded 6 minutes")
+        return 1
+    finally:
+        for attempt in range(6):
+            try:
+                shutil.rmtree(root)
+                break
+            except FileNotFoundError:
+                break
+            except OSError as exc:
+                if attempt == 5:
+                    print(f"SELFTEST WARNING: could not remove temporary folder: {exc}")
+                else:
+                    time.sleep(min(0.1 * (2 ** attempt), 1.0))
 
 
 def check(name, cond, detail=""):
@@ -55,7 +104,7 @@ def main():
                   "session_log": [{"keep": True}]}
         added = normalize_state(sparse)
         check("missing runtime state is initialized",
-              added == ["queue_built", "modules", "pending_modules", "paths"]
+              added == ["schema_version", "queue_built", "modules", "pending_modules", "paths"]
               and sparse["queue_built"] is False
               and sparse["modules"] == [] and sparse["pending_modules"] == []
               and sparse["paths"] == {},
@@ -73,8 +122,8 @@ def main():
     needed = ["deps.py", "bootstrap.py", "extract_source.py", "build_queue.py", "build_deck.py",
               "update_handoff.py", "verify_deck.py", "verify_corpus.py",
               "find_duplicates.py", "cleanup.py", "archive_inputs.py",
-              "check_version.py", "build_notes.js",
-              "handoff_template.md", "project_state.json"]
+              "check_version.py", "state_io.py", "build_notes.js",
+              "handoff_template.md", "project_state.template.json", "project_state.json"]
     for f in needed:
         check(f, os.path.exists(os.path.join(HERE, f)))
     check("template has placeholder",
@@ -574,7 +623,7 @@ def queue_loop_tests():
         decks   = os.path.join(root, "Anki Decks");        os.makedirs(decks)
         pdfs    = os.path.join(root, "Source Files");  os.makedirs(pdfs)
         scripts = os.path.join(root, "scripts");           os.makedirs(scripts)
-        for f in ("build_queue.py", "deps.py"):
+        for f in ("build_queue.py", "deps.py", "state_io.py"):
             shutil.copy(os.path.join(HERE, f), scripts)
         STATE_P = os.path.join(scripts, "project_state.json")
         json.dump({"modules": [], "pending_modules": []}, open(STATE_P, "w"))
@@ -679,7 +728,7 @@ def pass_archive_tests():
         arch    = os.path.join(root, "Old Anki Decks and Files"); os.makedirs(arch)
         scripts = os.path.join(root, "scripts");                 os.makedirs(scripts)
         for f in ("verify_deck.py", "archive_inputs.py", "deps.py", "cleanup.py",
-                  "update_handoff.py", "handoff_template.md"):
+                  "update_handoff.py", "state_io.py", "handoff_template.md"):
             shutil.copy(os.path.join(HERE, f), scripts)
 
         NAME = "Archive Test"
@@ -992,4 +1041,6 @@ def report():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    if os.environ.get("ANKI_SELFTEST_ISOLATED") == "1":
+        sys.exit(main())
+    sys.exit(run_isolated())

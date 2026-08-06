@@ -35,6 +35,7 @@ from deps import require
 require("zstandard", quiet=True)
 
 import sqlite3, zstandard, zipfile, hashlib, time, re, json, string, random
+from state_io import load_state, save_state
 
 _ENTITY = re.compile(r"&(?:[A-Za-z][A-Za-z0-9]{1,9}|#\d{1,5}|#x[0-9A-Fa-f]{1,5});")
 
@@ -162,8 +163,7 @@ ARGS  = [a for a in sys.argv[1:] if not a.startswith("--")]
 
 
 def pick_module():
-    with open(STATE, encoding="utf-8") as f:
-        st = json.load(f)
+    st = load_state(STATE, create=True)
 
     if PATCH:
         # Patch an ALREADY-BUILT deck in place, using COMPLETED/ as the source.
@@ -748,12 +748,10 @@ def main():
     if not build_ok:
         outstanding.append("BUILD DID NOT PASS ALL GATES - re-run before using output")
 
-    with open(STATE, encoding="utf-8") as f:
-        st2 = json.load(f)
+    st2 = load_state(STATE, create=True)
     if not PATCH:
         st2["pending_modules"] = [m for m in st2.get("pending_modules", []) if m["name"] != NAME]
-    with open(STATE, "w", encoding="utf-8") as f:
-        json.dump(st2, f, indent=2)
+    save_state(st2, STATE)
 
     # A patch must not recompute cards_before - on a patch `added` is usually 0, so
     # n_notes - added yields the CURRENT count and silently overwrites the original.

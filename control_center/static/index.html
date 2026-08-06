@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="control-token" content="__CONTROL_TOKEN__">
+  <title>Anki Optimizer · Control Center</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+  <div class="fiber-field" aria-hidden="true"></div>
+
+  <div class="app-shell">
+    <aside class="rail" aria-label="Main navigation">
+      <div class="mascot" aria-label="Prism, the update helper">
+        <div class="mascot-ear left"></div><div class="mascot-ear right"></div>
+        <div class="mascot-head"><span>&gt;_</span></div>
+        <div class="mascot-body"><span>✦</span></div>
+      </div>
+      <div class="brand-mini">PRISM</div>
+      <nav>
+        <button class="nav-button active" data-view="home" aria-label="Home">
+          <span class="nav-icon">⌂</span><span>Home</span>
+        </button>
+        <button class="nav-button" data-view="decks" aria-label="Deck review">
+          <span class="nav-icon">◫</span><span>Decks</span>
+        </button>
+        <button class="nav-button" data-view="preferences" aria-label="Preferences">
+          <span class="nav-icon">⌁</span><span>Prefs</span>
+        </button>
+        <button class="nav-button" data-view="updates" aria-label="Updates and setup">
+          <span class="nav-icon">↟</span><span>Update</span>
+        </button>
+      </nav>
+      <div class="rail-foot"><span class="pulse"></span><span id="rail-version">loading</span></div>
+    </aside>
+
+    <main>
+      <header class="topbar glass">
+        <div class="project-copy">
+          <span class="eyebrow">ACTIVE PROJECT</span>
+          <div class="path-row">
+            <input id="project-path" aria-label="Project folder path" spellcheck="false">
+            <button id="apply-project" class="icon-button" title="Use this path">✓</button>
+          </div>
+        </div>
+        <button id="choose-project" class="quiet-button">Choose folder</button>
+        <button id="open-project" class="quiet-button">Open folder</button>
+      </header>
+
+      <section class="view active" id="view-home">
+        <div class="welcome-row">
+          <div>
+            <span class="eyebrow">ANKI LLM OPTIMIZER</span>
+            <h1>A clear place for careful work.</h1>
+            <p class="lede">Stage a module, see what still needs review, and keep the toolkit healthy—without hunting through folders.</p>
+          </div>
+          <div class="status-orb" aria-hidden="true"><span>&gt;_</span></div>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric glass"><span class="metric-mark blue"></span><strong id="metric-total">—</strong><small>tracked modules</small></article>
+          <article class="metric glass"><span class="metric-mark violet"></span><strong id="metric-review">—</strong><small>need your review</small></article>
+          <article class="metric glass"><span class="metric-mark mint"></span><strong id="metric-verified">—</strong><small>verified decks</small></article>
+          <article class="metric glass"><span class="metric-mark pearl"></span><strong id="metric-staged">—</strong><small>decks staged</small></article>
+        </div>
+
+        <section class="stage-card glass">
+          <div class="section-title">
+            <div><span class="eyebrow">QUICK STAGE</span><h2>Drop in your next module</h2></div>
+            <label class="module-field">Module name<input id="module-name" placeholder="Airway Anatomy and Management"></label>
+          </div>
+          <div class="drop-grid">
+            <div class="drop-zone" id="source-drop" data-kind="source" tabindex="0" role="button">
+              <div class="drop-icon">✦</div>
+              <strong>Source files</strong>
+              <span>Drop PDFs, images, or text files</span>
+              <button class="small-button" data-picker="source">Browse files</button>
+              <input class="file-picker" id="source-picker" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.tif,.tiff,.webp,.txt,.md,.csv,.rtf">
+            </div>
+            <div class="drop-zone deck" id="deck-drop" data-kind="deck" tabindex="0" role="button">
+              <div class="drop-icon">▱</div>
+              <strong>Anki deck</strong>
+              <span>Drop one exported .apkg</span>
+              <button class="small-button" data-picker="deck">Browse deck</button>
+              <input class="file-picker" id="deck-picker" type="file" accept=".apkg">
+            </div>
+          </div>
+          <div id="upload-list" class="upload-list" aria-live="polite"></div>
+        </section>
+
+        <div class="home-lower">
+          <section class="glass setup-mini">
+            <span class="eyebrow">TOOLKIT HEALTH</span>
+            <h2 id="health-title">Checking this computer…</h2>
+            <div class="health-pills" id="health-pills"></div>
+            <button id="run-setup-home" class="primary-button">Run guided setup</button>
+          </section>
+          <section class="glass next-review">
+            <span class="eyebrow">NEXT HUMAN CHECKPOINT</span>
+            <div id="next-review-content"><h2>No deck loaded yet</h2><p>Your next judgement review will appear here.</p></div>
+            <button class="quiet-button" data-go="decks">Open deck review</button>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="view-decks">
+        <div class="page-heading">
+          <div><span class="eyebrow">HUMAN CHECKPOINT</span><h1>Deck review</h1><p>Verified status is never changed here without your pipeline approval step.</p></div>
+          <div class="segmented" role="group" aria-label="Deck status filter">
+            <button class="active" data-filter="all">All</button><button data-filter="review">Needs review</button><button data-filter="verified">Verified</button>
+          </div>
+        </div>
+        <div class="deck-layout">
+          <div class="deck-list glass" id="deck-list"></div>
+          <aside class="deck-detail glass" id="deck-detail">
+            <div class="empty-detail"><span>◫</span><h2>Select a deck</h2><p>Its files and judgement calls will open here.</p></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view" id="view-preferences">
+        <div class="page-heading">
+          <div><span class="eyebrow">YOUR RULES</span><h1>Preferences</h1><p>Your notes are preserved during every update. Pipeline safety gates still win.</p></div>
+          <button id="save-preferences" class="primary-button">Save preferences</button>
+        </div>
+        <div class="preference-grid">
+          <section class="editor-card glass">
+            <div class="editor-head"><div><h2>Profile</h2><p>How the agent should work for you.</p></div><span>PROFILE.md</span></div>
+            <textarea id="profile-editor" spellcheck="true" aria-label="Profile preferences"></textarea>
+          </section>
+          <section class="editor-card glass">
+            <div class="editor-head"><div><h2>Prompt add-ons</h2><p>Extra context by workflow—kept separate from updateable prompts.</p></div><span>USER_PROMPTS.md</span></div>
+            <textarea id="prompts-editor" spellcheck="true" aria-label="Prompt add-ons"></textarea>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="view-updates">
+        <div class="page-heading">
+          <div><span class="eyebrow">SAFE MAINTENANCE</span><h1>Updates & setup</h1><p>Only publisher-owned toolkit files are replaced. Your state and study materials stay put.</p></div>
+        </div>
+        <div class="maintenance-grid">
+          <section class="update-card glass">
+            <div class="update-glyph">↟</div>
+            <span class="eyebrow">PIPELINE UPDATE</span>
+            <h2 id="update-heading">Ready to check</h2>
+            <p id="update-copy">Download a stable, tested release with an automatic backup and rollback.</p>
+            <div class="preserve-strip"><span>✓ Decks</span><span>✓ Audit JSON</span><span>✓ Verified status</span><span>✓ Profile</span></div>
+            <div class="button-row">
+              <button id="check-update" class="primary-button">Check for updates</button>
+              <button id="install-update" class="quiet-button" disabled>Install update</button>
+            </div>
+          </section>
+          <section class="setup-card glass">
+            <div class="update-glyph setup">&gt;_</div>
+            <span class="eyebrow">ONE-TIME SETUP</span>
+            <h2>Let the installer handle it</h2>
+            <p>Open the correct terminal in this project and install only what is missing.</p>
+            <button id="run-setup" class="primary-button">Open guided setup</button>
+            <small>Passwords, if needed, are entered in the terminal—not in this dashboard.</small>
+          </section>
+        </div>
+        <section class="job-card glass" id="job-card" hidden>
+          <div class="job-top"><div><span class="eyebrow">ACTIVITY</span><h2 id="job-label">Working…</h2></div><span class="spinner"></span></div>
+          <div class="progress-track"><span id="progress-fill"></span></div>
+          <pre id="job-log" aria-live="polite"></pre>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

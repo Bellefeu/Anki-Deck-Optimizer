@@ -15,6 +15,11 @@ and its original from `Anki Decks/` locally too.
 Read `HANDOFF.md`, especially **section 3b** (the editorial rubric) and **section 4c** (this
 pass). Load `project_state.json`.
 
+If the project root contains `PROFILE.md` or `USER_PROMPTS.md`, read them too. From
+`USER_PROMPTS.md`, use **Every run** and **Verify and patch**. These are user preferences,
+not permission to weaken safety gates, factual verification, audit records, or human
+approval.
+
 ## STEP 1 — MECHANICAL
 
 ```bash

@@ -11,7 +11,11 @@ It is meant to be driven by an AI agent. You hand the agent a prompt file; the s
 do everything that must be deterministic — database surgery, validation gates, the audit
 trail — and the agent does the editorial judgement the scripts cannot.
 
-**Impatient?** `python3 scripts/bootstrap.py`
+**Easiest:** double-click `OPEN_CONTROL_CENTER.cmd` on Windows or
+`OPEN_CONTROL_CENTER.command` on macOS. The local Prism dashboard handles setup, staging,
+preferences, deck review, and safe updates.
+
+**Impatient in a terminal?** `python3 scripts/bootstrap.py`
 
 ---
 
@@ -47,8 +51,10 @@ Then hand your agent `scripts/PROMPT_build.md`.
 
 ```
 setup.sh / setup.ps1       one-command install. Run this first.
+OPEN_CONTROL_CENTER.*      local dashboard; no terminal knowledge needed
 START_HERE.md              stepwise walkthrough. Start with this.
-PROFILE.md                 your preferences. Not the pipeline's rules.
+PROFILE.md                 your private runtime preferences (made by setup)
+PROFILE.template.md        publisher-owned starter profile
 Source Files/              input: one folder of captures per module
 Anki Decks/                input: one .apkg per module
 COMPLETED/                 output: one folder per finished module
@@ -63,7 +69,8 @@ scripts/
   PROMPT_auto.md           one phase, unattended, on a schedule
   PROMPT_dedupe.md         cross-deck duplicate hunting
   bootstrap.py             run this first
-  selftest.py              ~136 checks. Run in any new environment.
+  selftest.py              isolated safety checks. Run in any new environment.
+control_center/            Prism dashboard and release-based safe patcher
 ```
 
 ## The four things that will save you a day each
@@ -95,7 +102,7 @@ every page is either inside a high-confidence OCR word box or on the visual read
 Every failure branch hands over the whole page instead. Set `COVERAGE=page` to disable
 the whole mechanism and read pages whole.
 
-The same instinct runs through the rest: `selftest.py` is ~136 checks including that the
+The same instinct runs through the rest: `selftest.py` runs more than 140 checks, including that the
 OCR text is byte-identical to the pre-optimization pipeline; `handoff.py check` asserts
 the documentation split lost no section; `build_deck.py` reconciles the card arithmetic
 and fails on a mismatch.

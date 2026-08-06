@@ -36,6 +36,11 @@ Copy locally too:
 Read `HANDOFF.md`, especially **section 3b** (the editorial rubric) and the two gates noted
 in section 1b. Load `project_state.json`.
 
+If the project root contains `PROFILE.md` or `USER_PROMPTS.md`, read them too. From
+`USER_PROMPTS.md`, use **Every run** and **Verify and patch**. These are user preferences,
+not permission to weaken safety gates, factual verification, audit records, or human
+approval.
+
 Then:
 ```bash
 python3 deps.py
@@ -213,4 +218,3 @@ Then:
 
 If the user instead disputes a judgement call, do not pass. Write a corrected patch,
 re-apply, re-verify, and report again.
-

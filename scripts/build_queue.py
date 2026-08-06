@@ -16,6 +16,7 @@ import os, sys, json, re, zipfile, sqlite3, tempfile, glob
 from deps import require
 require("zstandard", quiet=True)
 import zstandard
+from state_io import load_state, save_state
 
 HERE  = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(HERE, "project_state.json")
@@ -160,8 +161,7 @@ def main():
     print(f"Decks found:   {len(decks)}")
     print(f"PAIRED:        {len(matched)}\n")
 
-    with open(STATE, encoding="utf-8") as f:
-        st = json.load(f)
+    st = load_state(STATE, create=True)
 
     # Every module already tracked is out of the queue, whatever its status. Only
     # "verified" was excluded before, which is safe when the queue is built once by
@@ -232,8 +232,7 @@ def main():
     elif paths.get("deck_dir"):
         print("  (no decks found here - keeping the previously recorded input paths)")
 
-    with open(STATE, "w", encoding="utf-8") as f:
-        json.dump(st, f, indent=2)
+    save_state(st, STATE)
 
     print(f"\nCOMPLETED recorded as: {st['paths']['completed']}"
           + ("" if os.path.isdir(completed) else "   !! does not exist yet"))

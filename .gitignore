@@ -19,14 +19,20 @@
 !START_HERE.md
 !setup.sh
 !setup.ps1
-!PROFILE.md
+!PROFILE.template.md
 !LICENSE
+!OPEN_CONTROL_CENTER.command
+!OPEN_CONTROL_CENTER.cmd
+!open_control_center.sh
 !scripts/
 !scripts/*.py
 !scripts/*.js
 !scripts/*.md
 !scripts/VERSION.json
-!scripts/project_state.json
+!scripts/UPDATE_MANIFEST.json
+!scripts/project_state.template.json
+!control_center/
+!control_center/**
 
 # --- folder skeleton, so a clone has the right shape ---------------------
 !Source Files/
@@ -58,9 +64,9 @@ scripts/_out/
 scripts/work/
 scripts/__pycache__/
 **/__pycache__/
+.pipeline_backups/
 *.pyc
 .DS_Store
 
-# The one exception to the blanket *.json ignore is handled above by naming
-# project_state.json and VERSION.json explicitly. Audit JSON from a real run
-# stays out - it quotes card text.
+# Runtime JSON (including project_state.json and real audit records) stays out.
+# Only publisher-owned templates/manifests are added back above.

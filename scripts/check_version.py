@@ -24,7 +24,8 @@ TRACKED = [
     "check_consistency.py", "handoff.py", "deck_digest.py",
     "build_notes.js", "handoff_template.md", "handoff_reference_template.md",
     "PROMPT_build.md", "PROMPT_verify.md", "PROMPT_patch.md", "PROMPT_dedupe.md",
-    "PROMPT_auto.md", "next_action.py",
+    "PROMPT_auto.md", "next_action.py", "state_io.py", "check_version.py",
+    "project_state.template.json",
 ]
 
 
