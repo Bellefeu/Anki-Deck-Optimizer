@@ -9,6 +9,7 @@ const state = {
   update: null,
   activeJob: null,
   resetStep: 1,
+  guideLoaded: false,
 };
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
@@ -48,12 +49,326 @@ function toast(message, kind = "") {
 function setView(name) {
   $$(".nav-button").forEach((button) => button.classList.toggle("active", button.dataset.view === name));
   $$(".view").forEach((view) => view.classList.toggle("active", view.id === `view-${name}`));
+  if (name === "guide") loadGuide();
   if (name === "decks") loadDecks();
   if (name === "preferences") loadPreferences();
 }
 
 function prettyStatus(value) {
   return String(value || "unknown").replaceAll("-", " ");
+}
+
+function guideSlug(value) {
+  return String(value || "section")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "section";
+}
+
+function appendGuideInline(parent, source) {
+  const pattern = /(\*\*[^*]+\*\*|`[^`\n]+`|\[[^\]]+\]\([^)]+\)|<https?:\/\/[^>]+>)/g;
+  let cursor = 0;
+  for (const match of String(source).matchAll(pattern)) {
+    parent.append(document.createTextNode(source.slice(cursor, match.index)));
+    const token = match[0];
+    if (token.startsWith("**")) {
+      const strong = document.createElement("strong");
+      appendGuideInline(strong, token.slice(2, -2));
+      parent.append(strong);
+    } else if (token.startsWith("`")) {
+      const code = document.createElement("code");
+      code.textContent = token.slice(1, -1);
+      parent.append(code);
+    } else {
+      const markdownLink = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+      const href = markdownLink ? markdownLink[2] : token.slice(1, -1);
+      const label = markdownLink ? markdownLink[1] : href;
+      if (/^https?:\/\//i.test(href)) {
+        const link = document.createElement("a");
+        link.href = href;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.textContent = label;
+        parent.append(link);
+      } else {
+        parent.append(document.createTextNode(label));
+      }
+    }
+    cursor = match.index + token.length;
+  }
+  parent.append(document.createTextNode(source.slice(cursor)));
+}
+
+async function copyGuideText(text, button) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const fallback = document.createElement("textarea");
+      fallback.value = text;
+      fallback.style.position = "fixed";
+      fallback.style.opacity = "0";
+      document.body.append(fallback);
+      fallback.select();
+      document.execCommand("copy");
+      fallback.remove();
+    }
+    const original = button.textContent;
+    button.textContent = "Copied ✓";
+    button.classList.add("copied");
+    window.setTimeout(() => {
+      button.textContent = original;
+      button.classList.remove("copied");
+    }, 1800);
+    toast("Copied. Paste it into your LLM when you are ready.", "success");
+  } catch (_) {
+    toast("Copy was blocked. Select the prompt text and copy it manually.", "error");
+  }
+}
+
+function guidePromptMeta(code) {
+  const value = code.trim();
+  const lower = value.toLowerCase();
+  if (lower.includes("create a standalone scheduled task")) return ["Scheduled run", "Automate eight hours"];
+  if (lower.includes("prompt_auto.md")) return ["Automatic mode", "Run the next safe phase"];
+  if (lower.includes("prompt_build.md")) return ["Session A", "Build a module"];
+  if (lower.includes("prompt_verify.md")) return ["Session B", "Verify in a fresh session"];
+  if (lower.includes("prompt_patch.md")) return ["Correction loop", "Patch a judgement call"];
+  if (lower.includes("prompt_dedupe.md")) return ["Final step", "Check across every deck"];
+  if (lower.startsWith("compare completed/")) return ["Grade a rebuild", "Compare original and final"];
+  if (lower.startsWith("grade completed/")) return ["Grade a new deck", "Audit creation mode"];
+  if (lower.startsWith("fix the final deck")) return ["Apply the critique", "Repair the final deck"];
+  if (lower.startsWith("approved. pass it")) return ["Human approval", "Pass the verified deck"];
+  if (lower.startsWith("approved. cleanup")) return ["Finish the module", "Archive scratch work"];
+  return null;
+}
+
+function makeCopyButton(code, label = "Copy prompt") {
+  const button = document.createElement("button");
+  button.className = "guide-copy-button";
+  button.type = "button";
+  button.textContent = label;
+  button.addEventListener("click", () => copyGuideText(code, button));
+  return button;
+}
+
+function renderPromptLibrary(markdown) {
+  const grid = $("#prompt-card-grid");
+  grid.replaceChildren();
+  const seen = new Set();
+  const prompts = [];
+  const pattern = /```[^\n]*\n([\s\S]*?)```/g;
+  for (const match of markdown.matchAll(pattern)) {
+    const code = match[1].trim();
+    const meta = guidePromptMeta(code);
+    if (!meta || seen.has(code)) continue;
+    seen.add(code);
+    prompts.push({code, meta});
+  }
+  for (const [index, prompt] of prompts.entries()) {
+    const card = document.createElement("article");
+    card.className = "prompt-card";
+    card.dataset.tone = String((index % 5) + 1);
+    const top = document.createElement("div");
+    top.className = "prompt-card-top";
+    const label = document.createElement("span");
+    label.textContent = prompt.meta[0];
+    top.append(label, makeCopyButton(prompt.code));
+    const heading = document.createElement("h3");
+    heading.textContent = prompt.meta[1];
+    const pre = document.createElement("pre");
+    pre.textContent = prompt.code;
+    card.append(top, heading, pre);
+    grid.append(card);
+  }
+  return prompts.length;
+}
+
+function isGuideBlockStart(lines, index) {
+  const line = lines[index] || "";
+  if (!line.trim()) return true;
+  if (/^#{1,4}\s+/.test(line) || /^```/.test(line) || /^---+$/.test(line.trim())) return true;
+  if (/^\s*(?:[-*]|\d+\.)\s+/.test(line)) return true;
+  return /^\|/.test(line) && /^\|?\s*:?-+/.test(lines[index + 1] || "");
+}
+
+function appendGuideTable(container, lines, start) {
+  const rows = [];
+  let index = start;
+  while (index < lines.length && /^\|/.test(lines[index])) {
+    rows.push(lines[index].trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim()));
+    index += 1;
+  }
+  if (rows.length < 2) return start;
+  const wrap = document.createElement("div");
+  wrap.className = "guide-table-wrap";
+  const table = document.createElement("table");
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  for (const value of rows[0]) {
+    const cell = document.createElement("th");
+    appendGuideInline(cell, value);
+    headRow.append(cell);
+  }
+  head.append(headRow);
+  const body = document.createElement("tbody");
+  for (const values of rows.slice(2)) {
+    const row = document.createElement("tr");
+    for (const value of values) {
+      const cell = document.createElement("td");
+      appendGuideInline(cell, value);
+      row.append(cell);
+    }
+    body.append(row);
+  }
+  table.append(head, body);
+  wrap.append(table);
+  container.append(wrap);
+  return index;
+}
+
+function renderGuide(markdown) {
+  const content = $("#guide-content");
+  const toc = $("#guide-toc");
+  content.replaceChildren();
+  toc.replaceChildren();
+  const lines = markdown.replaceAll("\r\n", "\n").split("\n");
+  let chapter = document.createElement("section");
+  chapter.className = "guide-chapter guide-prologue";
+  content.append(chapter);
+  let chapterCount = 0;
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    if (!line.trim()) { index += 1; continue; }
+    if (/^#\s+/.test(line)) { index += 1; continue; }
+
+    const heading = line.match(/^(#{2,4})\s+(.+)$/);
+    if (heading) {
+      const level = heading[1].length;
+      const title = heading[2].replace(/\*\*/g, "").trim();
+      if (level === 2) {
+        chapterCount += 1;
+        chapter = document.createElement("section");
+        chapter.className = "guide-chapter";
+        chapter.id = `guide-${guideSlug(title)}`;
+        const marker = document.createElement("span");
+        marker.className = "chapter-marker";
+        marker.textContent = /^PART\s+\d+/i.test(title) ? title.split("—")[0].trim() : "REFERENCE";
+        const node = document.createElement("h2");
+        appendGuideInline(node, title.replace(/^PART\s+\d+\s+—\s+/i, ""));
+        chapter.append(marker, node);
+        content.append(chapter);
+        const link = document.createElement("button");
+        link.type = "button";
+        link.textContent = title;
+        const targetChapter = chapter;
+        link.addEventListener("click", () => targetChapter.scrollIntoView({behavior: "smooth", block: "start"}));
+        toc.append(link);
+      } else {
+        const node = document.createElement(level === 3 ? "h3" : "h4");
+        appendGuideInline(node, title);
+        chapter.append(node);
+      }
+      index += 1;
+      continue;
+    }
+
+    if (/^```/.test(line)) {
+      const language = line.slice(3).trim();
+      const block = [];
+      index += 1;
+      while (index < lines.length && !/^```/.test(lines[index])) {
+        block.push(lines[index]);
+        index += 1;
+      }
+      index += 1;
+      const code = block.join("\n").trimEnd();
+      const shell = document.createElement("section");
+      shell.className = `guide-code-card${guidePromptMeta(code) ? " is-prompt" : ""}`;
+      const top = document.createElement("div");
+      top.className = "guide-code-top";
+      const label = document.createElement("span");
+      label.textContent = guidePromptMeta(code)?.[0] || (language ? language.toUpperCase() : "COPYABLE TEXT");
+      top.append(label, makeCopyButton(code, guidePromptMeta(code) ? "Copy prompt" : "Copy"));
+      const pre = document.createElement("pre");
+      pre.textContent = code;
+      shell.append(top, pre);
+      chapter.append(shell);
+      continue;
+    }
+
+    if (/^---+$/.test(line.trim())) {
+      const divider = document.createElement("div");
+      divider.className = "guide-divider";
+      chapter.append(divider);
+      index += 1;
+      continue;
+    }
+
+    if (/^\|/.test(line) && /^\|?\s*:?-+/.test(lines[index + 1] || "")) {
+      index = appendGuideTable(chapter, lines, index);
+      continue;
+    }
+
+    const listStart = line.match(/^\s*([-*]|\d+\.)\s+(.+)$/);
+    if (listStart) {
+      const ordered = /\d+\./.test(listStart[1]);
+      const list = document.createElement(ordered ? "ol" : "ul");
+      let item = null;
+      while (index < lines.length) {
+        const match = lines[index].match(/^\s*([-*]|\d+\.)\s+(.+)$/);
+        if (match && /\d+\./.test(match[1]) === ordered) {
+          item = document.createElement("li");
+          appendGuideInline(item, match[2]);
+          list.append(item);
+          index += 1;
+        } else if (item && lines[index].trim() && !isGuideBlockStart(lines, index)) {
+          item.append(document.createTextNode(` ${lines[index].trim()}`));
+          index += 1;
+        } else {
+          break;
+        }
+      }
+      chapter.append(list);
+      continue;
+    }
+
+    const paragraphLines = [];
+    while (index < lines.length && !isGuideBlockStart(lines, index)) {
+      paragraphLines.push(lines[index].trim());
+      index += 1;
+    }
+    if (paragraphLines.length) {
+      const paragraph = document.createElement("p");
+      appendGuideInline(paragraph, paragraphLines.join(" "));
+      chapter.append(paragraph);
+    } else {
+      index += 1;
+    }
+  }
+  return chapterCount;
+}
+
+async function loadGuide() {
+  if (state.guideLoaded) return;
+  state.guideLoaded = true;
+  try {
+    const result = await api("/api/guide");
+    const prompts = renderPromptLibrary(result.markdown);
+    const chapters = renderGuide(result.markdown);
+    $("#guide-source-label").textContent = `${result.file} · ${chapters} chapters · ${prompts} copyable prompts`;
+  } catch (error) {
+    state.guideLoaded = false;
+    $("#guide-source-label").textContent = "The guide could not be loaded.";
+    $("#guide-content").replaceChildren();
+    const message = document.createElement("p");
+    message.className = "guide-error";
+    message.textContent = error.message;
+    $("#guide-content").append(message);
+    toast(error.message, "error");
+  }
 }
 
 function syncProjectPathWidth() {
@@ -443,6 +758,7 @@ async function setProject(path) {
     toast("Project folder selected.", "success");
     state.selectedDeck = null;
     state.update = null;
+    state.guideLoaded = false;
     await loadStatus();
     return result;
   } catch (error) {
@@ -458,6 +774,7 @@ async function chooseProject() {
     if (result.changed) {
       toast("Project folder selected.", "success");
       state.selectedDeck = null;
+      state.guideLoaded = false;
       await loadStatus();
     }
   } catch (error) {
@@ -616,6 +933,9 @@ function bindEvents() {
     if (event.key === "Escape" && !$("#reset-modal").hidden) closeResetModal();
   });
   window.addEventListener("resize", syncProjectPathWidth);
+  $("#jump-prompts").addEventListener("click", () => {
+    $("#prompt-library").scrollIntoView({behavior: "smooth", block: "start"});
+  });
   $("#run-setup-home").addEventListener("click", runSetup);
   $("#run-setup").addEventListener("click", runSetup);
   $("#check-update").addEventListener("click", () => startJob("/api/update/check", {}, "check"));

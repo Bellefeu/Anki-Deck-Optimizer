@@ -141,6 +141,17 @@ class PackagingTests(unittest.TestCase):
         self.assertIn('id="reset-preferences"', page)
         self.assertIn('data-open-staging="source"', page)
         self.assertIn('data-open-staging="deck"', page)
+        self.assertIn('data-view="guide"', page)
+        self.assertIn('id="prompt-card-grid"', page)
+        script = (ROOT / "control_center/static/app.js").read_text(encoding="utf-8")
+        self.assertIn('navigator.clipboard', script)
+        self.assertIn('function guidePromptMeta', script)
+
+    def test_guide_toc_captures_each_chapter_target(self):
+        script = (ROOT / "control_center/static/app.js").read_text(encoding="utf-8")
+        self.assertIn('const targetChapter = chapter;', script)
+        self.assertIn('() => targetChapter.scrollIntoView', script)
+        self.assertNotIn('() => chapter.scrollIntoView', script)
 
 
 class StateTests(unittest.TestCase):
@@ -222,6 +233,16 @@ class HttpTests(unittest.TestCase):
                     base + "/api/status", headers={"X-Control-Token": application.token})
                 status = json.load(urllib.request.urlopen(request, timeout=5))
                 self.assertEqual(status["pipeline"]["verified"], 1)
+
+                guide_request = urllib.request.Request(
+                    base + "/api/guide", headers={"X-Control-Token": application.token})
+                guide = json.load(urllib.request.urlopen(guide_request, timeout=5))
+                self.assertEqual(guide["file"], "START HERE.md")
+                self.assertEqual(
+                    guide["markdown"],
+                    (root / "START HERE.md").read_text(encoding="utf-8"),
+                )
+                self.assertIn("Read scripts/PROMPT_auto.md and execute it.", guide["markdown"])
 
                 payload = b"private staged source\n"
                 target = (base + "/api/stage?kind=source&module=Cardiac%20Basics"
@@ -319,7 +340,7 @@ class UpdateTests(unittest.TestCase):
             self.assertEqual((backup / retired.name).read_bytes(), b"old publisher launcher\n")
             self.assertEqual(
                 json.loads((root / "scripts/UPDATE_MANIFEST.json").read_text())["release_version"],
-                "1.2.0",
+                "1.3.0",
             )
             self.assertFalse((root / "scripts/.pipeline.lock").exists())
 
