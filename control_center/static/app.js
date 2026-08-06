@@ -8,10 +8,12 @@ const state = {
   selectedDeck: null,
   update: null,
   activeJob: null,
+  resetStep: 1,
 };
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
+const pathMeasure = document.createElement("canvas").getContext("2d");
 
 async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
@@ -54,11 +56,23 @@ function prettyStatus(value) {
   return String(value || "unknown").replaceAll("-", " ");
 }
 
+function syncProjectPathWidth() {
+  const input = $("#project-path");
+  const row = input.parentElement;
+  const check = $("#apply-project");
+  if (!pathMeasure || !row.clientWidth) return;
+  pathMeasure.font = getComputedStyle(input).font;
+  const measured = pathMeasure.measureText(input.value || input.placeholder || "Project folder").width + 5;
+  const available = Math.max(150, row.clientWidth - check.offsetWidth - 8);
+  input.style.width = `${Math.max(150, Math.min(measured, available))}px`;
+}
+
 async function loadStatus() {
   try {
     state.status = await api("/api/status");
     const data = state.status;
     $("#project-path").value = data.project;
+    syncProjectPathWidth();
     $("#rail-version").textContent = data.version;
     const pipeline = data.pipeline;
     $("#metric-total").textContent = pipeline.modules;
@@ -250,6 +264,67 @@ async function savePreferences() {
   }
 }
 
+function renderResetStep(step) {
+  state.resetStep = step;
+  const final = step === 2;
+  $("#reset-title").textContent = final ? "Final check" : "Reset to default preferences?";
+  $("#reset-copy").textContent = final
+    ? "This will replace both preference editors with the original defaults. Reset them now?"
+    : "Are you sure you want to reset to default preferences?";
+  $("#reset-note").textContent = final
+    ? "Your currently saved PROFILE.md and USER_PROMPTS.md will be kept as .bak recovery copies."
+    : "Unsaved editor changes will be discarded. Nothing changes until the second check.";
+  $("#reset-step-two").classList.toggle("active", final);
+  $("#reset-cancel").textContent = final ? "Go back" : "Keep my preferences";
+  $("#reset-continue").textContent = final ? "Reset to defaults" : "Continue";
+  $("#reset-continue").classList.toggle("danger-button", final);
+}
+
+function openResetModal() {
+  renderResetStep(1);
+  $("#reset-modal").hidden = false;
+  document.body.classList.add("modal-open");
+  $("#reset-cancel").focus();
+}
+
+function closeResetModal() {
+  $("#reset-modal").hidden = true;
+  document.body.classList.remove("modal-open");
+  $("#reset-preferences").focus();
+}
+
+async function continuePreferenceReset() {
+  if (state.resetStep === 1) {
+    renderResetStep(2);
+    $("#reset-cancel").focus();
+    return;
+  }
+  const button = $("#reset-continue");
+  button.disabled = true;
+  try {
+    const result = await api("/api/preferences/reset", {
+      method: "POST", body: {confirmation: "RESET TO DEFAULTS"},
+    });
+    $("#profile-editor").value = result.profile;
+    $("#prompts-editor").value = result.prompts;
+    closeResetModal();
+    toast(result.message, "success");
+  } catch (error) {
+    toast(error.message, "error");
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function cancelPreferenceReset() {
+  if (state.resetStep === 2) {
+    renderResetStep(1);
+    $("#reset-cancel").focus();
+  } else {
+    closeResetModal();
+  }
+}
+
 function inferModule(file) {
   const current = $("#module-name").value.trim();
   if (current) return current;
@@ -379,11 +454,23 @@ async function chooseProject() {
   try {
     const result = await api("/api/project/select", {method: "POST", body: {}});
     $("#project-path").value = result.project;
+    syncProjectPathWidth();
     if (result.changed) {
       toast("Project folder selected.", "success");
       state.selectedDeck = null;
       await loadStatus();
     }
+  } catch (error) {
+    toast(error.message, "error");
+  }
+}
+
+async function openStagingDestination(kind) {
+  try {
+    const result = await api("/api/staging/open", {
+      method: "POST", body: {kind, module: $("#module-name").value.trim()},
+    });
+    toast(`Opened ${result.path}`, "success");
   } catch (error) {
     toast(error.message, "error");
   }
@@ -507,13 +594,28 @@ function bindEvents() {
     event.stopPropagation();
     $(`#${button.dataset.picker}-picker`).click();
   }));
+  $$('[data-open-staging]').forEach((button) => button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openStagingDestination(button.dataset.openStaging);
+  }));
   $("#apply-project").addEventListener("click", () => setProject($("#project-path").value));
+  $("#project-path").addEventListener("input", syncProjectPathWidth);
   $("#project-path").addEventListener("keydown", (event) => {
     if (event.key === "Enter") setProject(event.currentTarget.value);
   });
   $("#choose-project").addEventListener("click", chooseProject);
   $("#open-project").addEventListener("click", openProject);
   $("#save-preferences").addEventListener("click", savePreferences);
+  $("#reset-preferences").addEventListener("click", openResetModal);
+  $("#reset-cancel").addEventListener("click", cancelPreferenceReset);
+  $("#reset-continue").addEventListener("click", continuePreferenceReset);
+  $("#reset-modal").addEventListener("click", (event) => {
+    if (event.target === event.currentTarget && state.resetStep === 1) closeResetModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !$("#reset-modal").hidden) closeResetModal();
+  });
+  window.addEventListener("resize", syncProjectPathWidth);
   $("#run-setup-home").addEventListener("click", runSetup);
   $("#run-setup").addEventListener("click", runSetup);
   $("#check-update").addEventListener("click", () => startJob("/api/update/check", {}, "check"));

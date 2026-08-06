@@ -59,6 +59,7 @@ override safety gates, factual verification, audit requirements, or human approv
 
 - (Add cross-deck preferences.)
 """
+RESET_CONFIRMATION = "RESET TO DEFAULTS"
 
 
 def is_project(path):
@@ -86,6 +87,13 @@ def clean_module_name(value):
     if re.search(r"[<>:\"|?*]", value):
         raise ValueError("Module name contains a character Windows cannot save.")
     return value
+
+
+def preference_defaults(root):
+    template = Path(root) / "control_center/templates/PROFILE.template.md"
+    if not template.is_file():
+        raise RuntimeError("The default profile template is missing. Run an update first.")
+    return template.read_text(encoding="utf-8"), USER_PROMPTS_TEMPLATE
 
 
 def open_native(path):
@@ -299,6 +307,19 @@ class Application:
             self.root = path
         return path
 
+    def staging_directory(self, kind, module=""):
+        if kind == "source":
+            target = self.root / "Source Files"
+            if str(module or "").strip():
+                target /= clean_module_name(module)
+        elif kind == "deck":
+            target = self.root / "Anki Decks"
+        else:
+            raise ValueError("Choose either the source or deck destination.")
+        target = safe_child(self.root, target)
+        target.mkdir(parents=True, exist_ok=True)
+        return target
+
     def status(self):
         root = self.root
         state_path = root / "scripts/project_state.json"
@@ -424,15 +445,15 @@ class Handler(BaseHTTPRequestHandler):
             elif parsed.path == "/api/preferences":
                 root = self.app.root
                 profile = root / "PROFILE.md"
-                template = root / "control_center/templates/PROFILE.template.md"
-                if not profile.exists() and template.exists():
-                    atomic_write_bytes(profile, template.read_bytes())
+                default_profile, default_prompts = preference_defaults(root)
+                if not profile.exists():
+                    atomic_write_bytes(profile, default_profile.encode("utf-8"))
                 prompts = root / "USER_PROMPTS.md"
                 self._json({
                     "ok": True,
                     "profile": profile.read_text(encoding="utf-8") if profile.exists() else "",
                     "prompts": prompts.read_text(encoding="utf-8") if prompts.exists()
-                    else USER_PROMPTS_TEMPLATE,
+                    else default_prompts,
                 })
             elif parsed.path.startswith("/api/jobs/"):
                 job = self.app.jobs.get(parsed.path.rsplit("/", 1)[-1])
@@ -466,8 +487,25 @@ class Handler(BaseHTTPRequestHandler):
                 atomic_write_bytes(root / "PROFILE.md", profile.encode("utf-8"), backup=True)
                 atomic_write_bytes(root / "USER_PROMPTS.md", prompts.encode("utf-8"), backup=True)
                 self._json({"ok": True, "message": "Preferences saved safely."})
+            elif parsed.path == "/api/preferences/reset":
+                data = self._read_json()
+                if data.get("confirmation") != RESET_CONFIRMATION:
+                    raise ValueError("The preference reset was not fully confirmed.")
+                root = self.app.root
+                profile, prompts = preference_defaults(root)
+                atomic_write_bytes(root / "PROFILE.md", profile.encode("utf-8"), backup=True)
+                atomic_write_bytes(root / "USER_PROMPTS.md", prompts.encode("utf-8"), backup=True)
+                self._json({
+                    "ok": True, "profile": profile, "prompts": prompts,
+                    "message": "Default preferences restored. Your previous files were backed up.",
+                })
             elif parsed.path == "/api/stage":
                 self._stage_upload(parsed)
+            elif parsed.path == "/api/staging/open":
+                data = self._read_json()
+                target = self.app.staging_directory(data.get("kind"), data.get("module", ""))
+                open_native(target)
+                self._json({"ok": True, "path": str(target)})
             elif parsed.path == "/api/open":
                 data = self._read_json()
                 candidate = self.app.allowed_open_path(data.get("path"))
