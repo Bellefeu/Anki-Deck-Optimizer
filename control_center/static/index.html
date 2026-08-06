@@ -14,10 +14,11 @@
 
   <div class="app-shell">
     <aside class="rail" aria-label="Main navigation">
-      <div class="mascot" aria-label="Prism, the update helper">
-        <div class="mascot-ear left"></div><div class="mascot-ear right"></div>
-        <div class="mascot-head"><span>&gt;_</span></div>
-        <div class="mascot-body"><span>✦</span></div>
+      <div class="prism-mark" aria-label="Prism">
+        <span class="prism-thread thread-one"></span>
+        <span class="prism-thread thread-two"></span>
+        <span class="prism-thread thread-three"></span>
+        <span class="prism-seed"></span>
       </div>
       <div class="brand-mini">PRISM</div>
       <nav>
@@ -43,7 +44,7 @@
           <span class="eyebrow">ACTIVE PROJECT</span>
           <div class="path-row">
             <input id="project-path" aria-label="Project folder path" spellcheck="false">
-            <button id="apply-project" class="icon-button" title="Use this path">✓</button>
+            <button id="apply-project" class="icon-button" title="Use this path" aria-label="Use this project path">✓</button>
           </div>
         </div>
         <button id="choose-project" class="quiet-button">Choose folder</button>
@@ -57,7 +58,12 @@
             <h1>A clear place for careful work.</h1>
             <p class="lede">Stage a module, see what still needs review, and keep the toolkit healthy—without hunting through folders.</p>
           </div>
-          <div class="status-orb" aria-hidden="true"><span>&gt;_</span></div>
+          <div class="flow-orb" aria-hidden="true">
+            <span class="flow-membrane"></span>
+            <span class="flow-arc arc-one"></span>
+            <span class="flow-arc arc-two"></span>
+            <span class="flow-grain"></span>
+          </div>
         </div>
 
         <div class="metric-grid">
@@ -77,14 +83,20 @@
               <div class="drop-icon">✦</div>
               <strong>Source files</strong>
               <span>Drop PDFs, images, or text files</span>
-              <button class="small-button" data-picker="source">Browse files</button>
+              <div class="drop-actions">
+                <button class="small-button" data-picker="source">Choose files</button>
+                <button class="folder-button" data-open-staging="source">Open Source folder</button>
+              </div>
               <input class="file-picker" id="source-picker" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.tif,.tiff,.webp,.txt,.md,.csv,.rtf">
             </div>
             <div class="drop-zone deck" id="deck-drop" data-kind="deck" tabindex="0" role="button">
               <div class="drop-icon">▱</div>
               <strong>Anki deck</strong>
               <span>Drop one exported .apkg</span>
-              <button class="small-button" data-picker="deck">Browse deck</button>
+              <div class="drop-actions">
+                <button class="small-button" data-picker="deck">Choose .apkg</button>
+                <button class="folder-button" data-open-staging="deck">Open Anki Decks folder</button>
+              </div>
               <input class="file-picker" id="deck-picker" type="file" accept=".apkg">
             </div>
           </div>
@@ -124,7 +136,10 @@
       <section class="view" id="view-preferences">
         <div class="page-heading">
           <div><span class="eyebrow">YOUR RULES</span><h1>Preferences</h1><p>Your notes are preserved during every update. Pipeline safety gates still win.</p></div>
-          <button id="save-preferences" class="primary-button">Save preferences</button>
+          <div class="preference-actions">
+            <button id="reset-preferences" class="quiet-button danger-outline">Reset to defaults</button>
+            <button id="save-preferences" class="primary-button">Save preferences</button>
+          </div>
         </div>
         <div class="preference-grid">
           <section class="editor-card glass">
@@ -144,7 +159,7 @@
         </div>
         <div class="maintenance-grid">
           <section class="update-card glass">
-            <div class="update-glyph">↟</div>
+            <div class="update-glyph flow-glyph" aria-hidden="true"><span></span><span></span><span></span></div>
             <span class="eyebrow">PIPELINE UPDATE</span>
             <h2 id="update-heading">Ready to check</h2>
             <p id="update-copy">Download a stable, tested release with an automatic backup and rollback.</p>
@@ -155,7 +170,7 @@
             </div>
           </section>
           <section class="setup-card glass">
-            <div class="update-glyph setup">&gt;_</div>
+            <div class="update-glyph setup flow-glyph" aria-hidden="true"><span></span><span></span><span></span></div>
             <span class="eyebrow">ONE-TIME SETUP</span>
             <h2>Let the installer handle it</h2>
             <p>Open the correct terminal in this project and install only what is missing.</p>
@@ -173,6 +188,22 @@
   </div>
 
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+  <div class="modal-backdrop" id="reset-modal" hidden>
+    <section class="safety-modal glass" role="dialog" aria-modal="true" aria-labelledby="reset-title" aria-describedby="reset-copy">
+      <div class="modal-flow" aria-hidden="true"><span></span><span></span></div>
+      <span class="eyebrow">PREFERENCE SAFETY CHECK</span>
+      <h2 id="reset-title">Reset to default preferences?</h2>
+      <p id="reset-copy">Are you sure you want to reset to default preferences?</p>
+      <div class="verification-steps" aria-label="Two confirmation steps">
+        <span class="active" id="reset-step-one">1</span><i></i><span id="reset-step-two">2</span>
+      </div>
+      <p class="reset-note" id="reset-note">Nothing changes until you complete the second check.</p>
+      <div class="modal-actions">
+        <button id="reset-cancel" class="quiet-button">Keep my preferences</button>
+        <button id="reset-continue" class="primary-button">Continue</button>
+      </div>
+    </section>
+  </div>
   <script src="/static/app.js"></script>
 </body>
 </html>
