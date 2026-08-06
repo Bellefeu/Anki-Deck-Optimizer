@@ -440,6 +440,15 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if parsed.path == "/api/status":
                 self._json({"ok": True, **self.app.status()})
+            elif parsed.path == "/api/guide":
+                guide = self.app.root / "START HERE.md"
+                if not guide.is_file():
+                    raise RuntimeError("START HERE.md is missing. Run an update first.")
+                self._json({
+                    "ok": True,
+                    "file": guide.name,
+                    "markdown": guide.read_text(encoding="utf-8"),
+                })
             elif parsed.path == "/api/decks":
                 self._json({"ok": True, "decks": deck_rows(self.app.root)})
             elif parsed.path == "/api/preferences":

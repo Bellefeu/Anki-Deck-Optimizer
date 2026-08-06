@@ -25,6 +25,9 @@
         <button class="nav-button active" data-view="home" aria-label="Home">
           <span class="nav-icon">⌂</span><span>Home</span>
         </button>
+        <button class="nav-button" data-view="guide" aria-label="Start Here guide">
+          <span class="nav-icon guide-nav-icon" aria-hidden="true"><i></i><i></i><i></i></span><span>Start</span>
+        </button>
         <button class="nav-button" data-view="decks" aria-label="Deck review">
           <span class="nav-icon">◫</span><span>Decks</span>
         </button>
@@ -115,6 +118,45 @@
             <div id="next-review-content"><h2>No deck loaded yet</h2><p>Your next judgement review will appear here.</p></div>
             <button class="quiet-button" data-go="decks">Open deck review</button>
           </section>
+        </div>
+      </section>
+
+      <section class="view" id="view-guide">
+        <section class="guide-hero">
+          <div class="guide-cinema" aria-hidden="true">
+            <span class="film-membrane membrane-a"></span>
+            <span class="film-membrane membrane-b"></span>
+            <span class="film-void"></span>
+            <span class="film-dust"></span>
+          </div>
+          <div class="guide-hero-copy">
+            <span class="eyebrow">YOUR COMPLETE WALKTHROUGH</span>
+            <h1>Start here.<br>Everything flows from this.</h1>
+            <p>Read the live guide, move through it in order, and copy any prompt with one click.</p>
+            <div class="guide-hero-actions">
+              <button id="jump-prompts" class="primary-button">Open prompt library</button>
+              <span id="guide-source-label">Reading START HERE.md…</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="prompt-library" id="prompt-library">
+          <div class="section-title prompt-library-title">
+            <div><span class="eyebrow">COPY · PASTE · RUN</span><h2>Your prompt library</h2><p>These cards come directly from the guide. Nothing is retyped or hidden.</p></div>
+          </div>
+          <div class="prompt-card-grid" id="prompt-card-grid">
+            <div class="guide-loader"><span></span><p>Gathering your prompts…</p></div>
+          </div>
+        </section>
+
+        <div class="guide-layout">
+          <aside class="guide-index glass">
+            <span class="eyebrow">ON THIS PAGE</span>
+            <nav id="guide-toc" aria-label="Start Here sections"></nav>
+          </aside>
+          <article class="guide-reading" id="guide-content" aria-live="polite">
+            <div class="guide-loader"><span></span><p>Turning the guide into a walkthrough…</p></div>
+          </article>
         </div>
       </section>
 

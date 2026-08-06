@@ -8,12 +8,13 @@ You can use either of these desktop agents:
 - **Codex in the ChatGPT desktop app**
 
 Both can read this folder, run the scripts, and follow the prompt files. A normal web chat
-cannot work directly in a folder on your computer. Anything in a grey box is meant to be
-copied exactly.
+cannot work directly in a folder on your computer. Anything in a code-style box is meant
+to be copied exactly.
 
 The easiest path uses the new **Control Center**. It lets you choose the project, run
 setup, drop in files, edit preferences, review finished decks, and install safe updates.
-You do not need to know terminal commands.
+Open its **Start** tab to read this same guide with colorful, one-click copy buttons. You
+do not need to know terminal commands.
 
 ### Open the Control Center
 
