@@ -184,6 +184,54 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("field-unavailable", field)
         self.assertIn("field-unavailable", (ROOT / "control_center/static/app.css").read_text(encoding="utf-8"))
 
+    def test_every_uncopyable_prompt_can_explain_itself(self):
+        """A disabled copy button must never be the only signal. Both the
+        library and the inline guide prompts attach a visible reason."""
+        script = (ROOT / "control_center/static/app.js").read_text(encoding="utf-8")
+        self.assertIn("function promptRequirement", script)
+        self.assertIn("function requirementNote", script)
+        # Attached in all three places a copy button can appear.
+        self.assertIn("const note = requirementNote(prompt.code);", script)
+        self.assertIn("const note = promptMeta ? requirementNote(code) : null;", script)
+        self.assertIn('requirementNote("", {requiresDeck: false, requiresFeedback: true})', script)
+        # And kept current as the deck selection and correction text change.
+        self.assertIn("$$('[data-prompt-requirement]')", script)
+        self.assertNotIn("data-patch-hint", script)
+        self.assertNotIn("patchHint", script)
+        styles = (ROOT / "control_center/static/app.css").read_text(encoding="utf-8")
+        for state in ("blocked", "ready"):
+            with self.subTest(state=state):
+                self.assertIn(f'.prompt-requirement[data-state="{state}"]', styles)
+
+    def test_home_reads_as_one_descending_sequence(self):
+        """State, then what is waiting on you, then what to add, then how
+        the machine is. The module name gates staging, so it sits with the
+        drop zones rather than opposite a heading."""
+        page = (ROOT / "control_center/static/index.html").read_text(encoding="utf-8")
+        order = [
+            'id="metric-review"',
+            'id="next-review-content"',
+            'id="module-name"',
+            'id="source-drop"',
+            'id="health-pills"',
+        ]
+        positions = [page.index(marker) for marker in order]
+        self.assertEqual(positions, sorted(positions), f"Home is out of order: {order}")
+
+    def test_the_field_gives_way_to_the_text_as_the_page_scrolls(self):
+        field = (ROOT / "control_center/static/prism-field.js").read_text(encoding="utf-8")
+        script = (ROOT / "control_center/static/app.js").read_text(encoding="utf-8")
+        self.assertIn("setDrift(progress)", field)
+        self.assertIn('window.addEventListener("scroll", syncFieldDrift', script)
+        # Home is bare text on the void below the fold, so it must recede
+        # further than the views whose content sits on filled surfaces.
+        recessions = dict(re.findall(r"(\w+): \{body:.*?recede: ([\d.]+)\}", script))
+        self.assertEqual(len(recessions), 5, f"expected a recession per view, got {recessions}")
+        self.assertEqual(float(recessions["home"]), 1.0)
+        for view in ("guide", "decks", "preferences", "updates"):
+            with self.subTest(view=view):
+                self.assertLess(float(recessions[view]), 1.0)
+
     def test_user_facing_surfaces_carry_no_em_or_en_dashes(self):
         for relative in (
             "START HERE.md",

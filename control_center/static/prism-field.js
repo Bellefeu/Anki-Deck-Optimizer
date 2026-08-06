@@ -491,6 +491,19 @@ void main() {
       this.composed = false;
       this.dirty = true;
 
+      /* How far down the page we are, and how strongly this scene reacts
+         to that. The body is composed against the top of a view; as the
+         reader descends into denser content it climbs away toward the
+         corner, shrinks and dims, so it is never the thing behind a line
+         of text. Scenes whose content sits on filled surfaces can afford
+         to barely move. */
+      this.drift = 0;
+      this.targetDrift = 0;
+      this.recede = 1;
+
+      /* Rises once, on the first frame the field is ever composed. */
+      this.ignition = 0;
+
       this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
       this.onLost = (event) => {
@@ -668,6 +681,7 @@ void main() {
       this.target.point = settings.point === undefined ? 1.15 : settings.point;
       this.targetIntensity = settings.intensity === undefined ? 1.0 : settings.intensity;
       this.targetWarm = settings.warm === undefined ? 0.0 : settings.warm;
+      this.recede = settings.recede === undefined ? 1.0 : settings.recede;
 
       /* The first composition arrives already framed. Easing into it from
          a default would mean the opening seconds show a shape that is the
@@ -683,6 +697,15 @@ void main() {
         this.frame.point = this.target.point;
         this.warm = this.targetWarm;
       }
+    }
+
+    /* progress is 0 at the top of a view and 1 once the reader is well
+       into the body of it. */
+    setDrift(progress) {
+      const next = Math.max(0, Math.min(1, progress));
+      if (Math.abs(next - this.targetDrift) < 0.001) return;
+      this.targetDrift = next;
+      this.dirty = true;
     }
 
     start() {
@@ -721,7 +744,11 @@ void main() {
       this.frame.point += (this.target.point - this.frame.point) * ease;
       this.intensity += (this.targetIntensity - this.intensity) * ease;
       this.warm += (this.targetWarm - this.warm) * ease;
+      /* Slower than the rest, so a flick of the wheel does not make the
+         backdrop lurch. */
+      this.drift += (this.targetDrift - this.drift) * ease * 0.55;
       if (this.morph < 1) this.morph = Math.min(1, this.morph + delta / 1500);
+      if (this.ignition < 1) this.ignition = Math.min(1, this.ignition + delta / 1400);
 
       this.resize();
       /* With motion reduced the clock is frozen and every ease resolves in
@@ -776,18 +803,29 @@ void main() {
 
       const program = this.programs.points;
       const u = this.uniforms.points;
+
+      /* Recession. Climbing toward the top-right corner rather than simply
+         fading keeps the body present and moving while it hands the middle
+         of the page back to the text. */
+      const back = this.drift * this.recede;
+      const ignite = 0.58 + 0.42 * (1 - Math.pow(1 - this.ignition, 3));
+      const x = this.frame.x + back * 0.30;
+      const y = this.frame.y + back * 0.50;
+      const scale = this.frame.scale * (1 - 0.45 * back) * ignite;
+      const lit = this.intensity * (1 - 0.55 * back);
+
       gl.useProgram(program);
       gl.uniform1f(u.uTime, this.clock);
       gl.uniform2f(u.uRes, this.width, this.height);
       gl.uniform1f(u.uBodyPrev, this.bodyPrev);
       gl.uniform1f(u.uBodyNext, this.bodyNext);
       gl.uniform1f(u.uMorph, this.easeMorph());
-      gl.uniform4f(u.uFrame, this.frame.x, this.frame.y, this.frame.scale,
+      gl.uniform4f(u.uFrame, x, y, scale,
         this.frame.point * Math.min(window.devicePixelRatio || 1, 2));
       /* Total light in the frame is what should stay fixed, not light per
          sample. Dividing by the budget means a machine that drops to a
          third of the samples gets a grainier field, not a darker one. */
-      gl.uniform1f(u.uIntensity, this.intensity * 1.2 / this.sampleBudget);
+      gl.uniform1f(u.uIntensity, lit * 1.2 / this.sampleBudget);
       gl.uniform1f(u.uWarm, this.warm);
 
       gl.bindVertexArray(this.pointsVAO);
