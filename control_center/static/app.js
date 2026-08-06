@@ -263,7 +263,8 @@ function renderGuide(markdown) {
         const link = document.createElement("button");
         link.type = "button";
         link.textContent = title;
-        link.addEventListener("click", () => chapter.scrollIntoView({behavior: "smooth", block: "start"}));
+        const targetChapter = chapter;
+        link.addEventListener("click", () => targetChapter.scrollIntoView({behavior: "smooth", block: "start"}));
         toc.append(link);
       } else {
         const node = document.createElement(level === 3 ? "h3" : "h4");
