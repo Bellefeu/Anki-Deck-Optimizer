@@ -2,9 +2,14 @@
 
 Everything you need, in order. You do not need to understand the code.
 
-You will be working in **Claude Cowork** (the desktop app). Every step below is either a
-terminal command or a block of text you paste into Claude. Anything in a grey box is meant
-to be copied exactly.
+You can use either of these desktop agents:
+
+- **Claude Cowork**
+- **Codex in the ChatGPT desktop app**
+
+Both can read this folder, run the scripts, and follow the prompt files. A normal web chat
+cannot work directly in a folder on your computer. Anything in a grey box is meant to be
+copied exactly.
 
 If you haven't used terminal commands before, it's not as scary as it sounds.
 Everything is laid out for you here, just follow instructions slowly, with lots of copy/paste.
@@ -15,24 +20,24 @@ Everything is laid out for you here, just follow instructions slowly, with lots 
 
 ### 1. Put this folder somewhere on your computer
 
-Clone or download the repo. Anywhere is fine — Desktop, Documents, a Dropbox folder.
+Clone or download the repo. Your Desktop or Documents folder is fine.
 
 - Q: How do I download this "repo", and what is a "repo"?
-- A: Repository, the term for all GitHub projects. If you are reading this on GitHub, click the green Code button at the top right, then click Download ZIP, and extract the folder. Save it anywhere on your computer, somewhere you know where it is.
+- A: A repository, or "repo," is a project on GitHub. If you are reading this on GitHub,
+  click the green **Code** button, click **Download ZIP**, and extract the ZIP file. Move
+  the extracted folder to a place you can find again.
 
-**One rule: it must be on your actual hard drive, not a cloud-only folder.** The pipeline
-uses SQLite, and SQLite cannot write to a Google Drive / iCloud / OneDrive mount — every
-write throws `disk I/O error`. This is not a bug in the scripts and there is no way around
-it.
+**One rule: the folder must be available on your actual hard drive, not cloud-only.** The
+pipeline uses SQLite. Cloud-only folders may cause a `disk I/O error` or may look empty.
 
 If you *do* want to keep it in Google Drive so it syncs across machines, that works, but
 you must mark the folder **Available offline** first:
 
 - Install Google Drive for desktop: <https://support.google.com/a/users/answer/13022292>
 - Find the folder in Finder / File Explorer, right-click it, choose **Available offline**
-- Drive sync glitches often. If Claude says a folder is empty when you can see files in
+- Drive sync glitches often. If your agent says a folder is empty when you can see files in
   it, pause and un-pause sync from the Drive menu bar icon. If that does not fix it, quit
-  the Drive app completely and reopen it. That always forces a sync.
+  the Drive app completely and reopen it. That usually restarts the sync.
 
 An unsynced folder reads as **empty**, not as an error — which looks exactly like "there is
 no work to do". The scripts warn you about this, but know it going in.
@@ -43,9 +48,11 @@ First, you need to open a terminal inside the project folder.
 
 How to open the terminal to your folder:
 
-- macOS: Open the Terminal app, type ```cd ```  (make sure to keep the space after cd!), then drag the project folder from Finder directly into the terminal window, and press Enter.
+- macOS: Open the Terminal app. Type `cd ` with one space after it. Drag the project
+  folder from Finder into the Terminal window, then press Enter.
 
-- Windows: Open the project folder in File Explorer, click the address bar at the very top, type ```cmd``` (or ```powershell```), and press Enter.
+- Windows: Open the project folder in File Explorer, click the address bar at the very
+  top, type `powershell`, and press Enter.
 
 - Linux: Right-click anywhere inside the project folder and select Open in Terminal.
 
@@ -67,12 +74,13 @@ That's it! The installer will figure out what you are missing—Python, Poppler,
 
 A few things worth knowing:
 
-- **It will ask for your password.** Installing system software requires it. The script
+- **It may ask for your password.** Installing system software may require it. The script
   prints every command before it runs, and never runs anything as administrator silently.
-- **Want to see what it would do first?** `bash setup.sh --dry-run` prints the exact
-  commands and changes nothing. Use that list to install by hand if you would rather.
-- **macOS:** if you do not have Homebrew, it offers to install it. Say yes — it is how
-  macOS gets these tools. Nothing else works without it.
+- **Want to see what it would do first?** On macOS or Linux, run
+  `bash setup.sh --dry-run`. On Windows, run `.\setup.ps1 -DryRun`. These commands print
+  the planned steps and change nothing.
+- **macOS:** if you do not have Homebrew, the installer offers to install it. The setup
+  script uses Homebrew to install the missing tools.
 - **Windows:** it uses `winget`, which ships with Windows 11 and recent Windows 10. If
   PowerShell refuses to run the script, run this once:
   `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
@@ -88,13 +96,15 @@ A few things worth knowing:
 When it finishes installing it automatically runs the checks and self-tests, and prints
 what to do next.
 
+The commands below use `python3`. On Windows, use `py` instead if `python3` is not found.
+
 ### 3. Confirm it says READY
 
 The installer ends by running `scripts/bootstrap.py`, which checks everything and runs
-~136 self-tests. It takes about a minute.
+141 self-tests.
 
 **It must end with `READY`.** If it says `NOT READY`, it prints exactly what is missing —
-fix that and run `bash setup.sh` again. Do not skip ahead. Every problem it catches is one
+fix that and run the installer again. Do not skip ahead. Every problem it catches is one
 that would otherwise surface halfway through a real deck.
 
 You can re-run the checks alone at any time, without the installer:
@@ -113,10 +123,29 @@ sensible; read them once so you know what you agreed to.
 keep it, change that line before you build anything. It changes how a rebuilt deck must be
 imported, and it is far cheaper to decide now than later.
 
-### 5. Point Cowork at the folder
+### 5. Point your agent at the folder
 
-In Cowork, connect the project folder as your working folder. Everything after this
-assumes Claude can see it.
+#### Use Claude Cowork
+
+In Cowork, connect the project folder as your working folder.
+
+#### Use ChatGPT Codex
+
+1. Install the [ChatGPT desktop app](https://learn.chatgpt.com/docs/quickstart) for Windows
+   or macOS, then sign in.
+2. Choose **Codex** in the app.
+3. Open this project folder.
+4. If the app asks **Local** or **Worktree**, choose **Local**. Your decks, source files,
+   results, and progress must stay in this folder.
+5. Start with **Ask for approval** in the permission menu below the message box. Codex can
+   edit this folder, but it may ask before using the internet. Approve web access when it
+   checks medical facts. Do not use **Full access**.
+
+For the best clinical review, choose **5.6 Sol** with **High** reasoning if your account
+shows those choices. If it does not, use the strongest Codex model available to you.
+
+Official OpenAI help: [Quickstart](https://learn.chatgpt.com/docs/quickstart) and
+[Permissions](https://learn.chatgpt.com/docs/permission-modes).
 
 ---
 
@@ -139,15 +168,12 @@ Two folders, two things to drop in. Names must match.
 | Type | What happens | Notes |
 |---|---|---|
 | `.pdf` | Full pipeline: text layer or OCR + coverage gate | Best for page captures (GoFullPage, etc.) |
-| `.jpg`, `.png`, `.gif`, `.bmp`, `.tiff`, `.webp` | Wrapped as PDF, then same pipeline as above | Drop screenshots directly — no conversion needed |
-| `.txt`, `.md`, `.csv` | Read directly as text — cheapest option | Great for transcripts, notes, outlines |
-| `.ppt`, `.pptx`, `.doc`, `.docx` | Claude reads the **text** directly | See note below about images ↓ |
+| `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.tif`, `.tiff`, `.webp` | Wrapped as PDF, then same pipeline as above | Drop screenshots directly — no conversion needed |
+| `.txt`, `.md`, `.csv`, `.rtf` | Read directly as text — cheapest option | Great for transcripts, notes, outlines |
 
-**If your PowerPoint or Word file contains diagrams, figures, or images that need
-to be read:** export it to PDF yourself first (**File → Save As → PDF**, or
-**File → Export → PDF**). This preserves image quality exactly as your application
-renders it — no third-party conversion, no quality loss. Drop the PDF into the
-source folder alongside any other files.
+**PowerPoint and Word files are not direct inputs.** Export `.ppt`, `.pptx`, `.doc`, or
+`.docx` files to PDF first (**File → Save As → PDF** or **File → Export → PDF**). Drop the
+PDF into the source folder.
 
 Do **not** use an online converter — it degrades quality and uploads your course
 material to a third party.
@@ -187,38 +213,58 @@ Stage **as many modules as you would like** before starting!
 
 ## PART 3 — AUTO MODE (recommended)
 
-Set it running and read the results later.
+Set it running and read the results later. First, run this once in a normal chat:
 
-### Set up the scheduled task. You must do this every evening, to preserve the 8-hour time encoding (optional)
-- You can instead just wake up and cancel it manually, but I highly recommend an automated stop.
-
-In a **fresh Cowork chat**, paste this. **Replace the folder path with yours.**
-
-I repeat.... **Replace the folder path with yours.**
-
-- Mac: Right-click the folder, hold the Option key, and click "Copy [Folder Name] as Pathname".
-
-- Windows: Right-click the folder and select "Copy as path".
-
+```text
+Read scripts/PROMPT_auto.md and execute it.
 ```
-- Please create a new scheduled task with the following exact specifications:
 
-- Name: Auto anki optimize
-- Description: Automatically build and verify/patch all queued decks via PROMPT_auto.md
-- Prompt: Read scripts/PROMPT_auto.md and execute it.
-- Repeats: Every 1 hour, turning itself off automatically 8 hours after it starts.
-- Approvals: Skip all approvals.
-- Folder: /full/path/to/your/project/folder
-- Conditions: Scheduled tasks run even when the computer is asleep and offline.
+Fix any setup error it reports before you create a schedule.
+
+### Schedule Claude Cowork
+
+In a fresh Cowork chat, ask for a task that runs in this project folder once per hour for
+the next 8 hours. Use this exact task prompt:
+
+```text
+Read scripts/PROMPT_auto.md and execute it.
 ```
+
+### Schedule ChatGPT Codex
+
+1. Open **Settings → General → Permissions**. Turn on **Auto-review**.
+2. Return to this Codex project. Choose **Approve for me** below the message box.
+3. Stay in **Local**. Do not choose **Worktree** or **Cloud**.
+4. In a fresh Codex chat, paste this:
+
+```text
+Create a standalone scheduled task named "Auto Anki Optimize."
+
+Run it in this Local project, not a worktree or cloud environment.
+Run once per hour for the next 8 hours, then stop.
+Use this exact prompt for every run:
+
+Read scripts/PROMPT_auto.md and execute it.
+```
+
+Open **Scheduled** in the left sidebar to check the task or use **Run now**. Scheduled
+tasks use your normal permission settings. **Approve for me** starts with the same workspace
+boundary as **Ask for approval**, but OpenAI reviews eligible requests instead of waiting
+for you. Do not use **Full access**.
+
+For any local scheduled task, your computer must be awake and online, and the desktop app
+must stay open. OpenAI explains this in [Scheduled tasks](https://learn.chatgpt.com/docs/automations).
+
+If you do not see **Scheduled**, this feature may not be enabled for your account or
+workspace. Use **Part 4 — Manual Mode** instead.
 
 ### Then
 
 Stage everything you want done, and hit **Run Now** on the task.
 
-It picks up one module per run, builds it, saves the audit trail, and stops. Next hour it
-takes the next one. When it hits a usage limit it just keeps checking until the limit
-lifts. Expect roughly **2–5 hours per deck** including waiting out limits.
+It does one phase per run, then stops. A phase may build, verify, or patch one module. The
+next hourly run continues where the last run stopped. If a run hits a usage limit, a later
+run tries again. Expect roughly **2–5 hours per deck** including the time between runs.
 
 **Two things never happen unattended**, by design:
 
@@ -384,12 +430,12 @@ itself so it cannot ship two cards that contradict each other.
 |---|---|
 | `disk I/O error` | The folder is on a cloud mount. Move it to local disk. |
 | A folder "is empty" but you can see files | Cloud sync has not materialized them. Quit and reopen the Drive app. |
-| Claude reports a bug that sounds already-fixed | Stale script copy. Run `python3 scripts/check_version.py` before believing any bug report. |
+| Your agent reports a bug that sounds already-fixed | Stale script copy. Run `python3 scripts/check_version.py` before believing any bug report. |
 | Counts do not reconcile at build time | Something edited the deck outside `ops.json`. The build is supposed to fail here — do not force it. |
 | `unaccounted_ink_px` is not 0 | The coverage proof failed. Re-run extraction with `COVERAGE=page` and it reads whole pages instead. |
 | A tool is "missing" right after installing it | Your terminal was open before the install. Close it, open a new one, re-run. |
 | PowerShell won't run `setup.ps1` | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, once. |
-| Anything else | `bash setup.sh` again — it is safe to re-run and fixes most environment problems. |
+| Anything else | Run the installer again: `bash setup.sh` on macOS/Linux or `.\setup.ps1` on Windows. |
 
 **Read these, in this order, if you want more:**
 
