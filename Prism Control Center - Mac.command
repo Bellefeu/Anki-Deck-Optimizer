@@ -3,7 +3,7 @@ set -u
 
 PROJECT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 cd "$PROJECT_DIR" || exit 1
-bash "$PROJECT_DIR/open_control_center.sh"
+bash "$PROJECT_DIR/control_center/launch.sh"
 status=$?
 
 if [ "$status" -ne 0 ]; then

@@ -98,11 +98,10 @@ def main():
                 quiet=True)
         say(OK, "python packages and CLI tools")
     except SystemExit:
-        problems.append("dependencies missing - run the installer: "
-                        "`bash setup.sh` (macOS/Linux) or `.\\setup.ps1` (Windows)")
+        problems.append("dependencies missing - open Prism and run guided setup")
         say(BAD, "dependencies missing",
-            "run `bash setup.sh` from the project root - it installs everything, "
-            "then re-runs this")
+            "open Prism and click Open guided setup; it installs everything, "
+            "then re-runs this check")
     except Exception as e:
         problems.append(f"deps check failed: {e}")
         say(BAD, "deps check failed", str(e))
@@ -110,10 +109,9 @@ def main():
     if shutil.which("node"):
         say(OK, "node (needed for the NOTES doc)")
     else:
-        warnings.append("node not found - build_notes.js cannot run; "
-                        "`bash setup.sh` installs it")
+        warnings.append("node not found - build_notes.js cannot run; guided setup installs it")
         say(WARN, "node not found",
-            "the NOTES doc step will fail until you install it - run `bash setup.sh`")
+            "the NOTES doc step will fail until you run Prism's guided setup")
 
     # 3. state file
     print("\n--- 3. Project state ---")
@@ -152,7 +150,7 @@ def main():
     if os.path.exists(pf):
         say(OK, "PROFILE.md exists (left alone)")
     else:
-        template = os.path.join(ROOT, "PROFILE.template.md")
+        template = os.path.join(ROOT, "control_center", "templates", "PROFILE.template.md")
         from state_io import atomic_write_bytes
         content = open(template, "rb").read() if os.path.exists(template) else PROFILE.encode("utf-8")
         atomic_write_bytes(pf, content)
@@ -214,16 +212,16 @@ def main():
     print("""  Next:
 
     1. Return to the Prism Control Center. If it is not open, double-click:
-         Windows: OPEN_CONTROL_CENTER.cmd
-         Mac:     OPEN_CONTROL_CENTER.command
+         Windows: Prism Control Center - Windows.cmd
+         Mac:     Prism Control Center - Mac.command
     2. Open Prefs, read your profile, and click Save preferences.
     3. Open Home, enter a module name, and drop in source files and/or an .apkg.
-    4. Follow START_HERE.md to run the pipeline with your agent.
+    4. Follow START HERE.md to run the pipeline with your agent.
 
-       Terminal steps are still available in START_HERE.md if you prefer them.
+       Terminal steps are still available in START HERE.md if you prefer them.
 
   Read first, in this order:
-    START_HERE.md                 stepwise walkthrough - every command, in order
+    START HERE.md                 stepwise walkthrough - every command, in order
     COMPLETED/EXAMPLE/README.md   what a finished module looks like
     scripts/HANDOFF.md            the job. §3b is the actual rubric.
     scripts/HANDOFF_REFERENCE.md  do NOT read whole - pull sections on demand

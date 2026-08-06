@@ -23,7 +23,7 @@ if "%SETUP_TRIED%"=="1" (
 )
 set "SETUP_TRIED=1"
 echo Python 3.10+ was not found. Opening the guided setup first...
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0setup.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0control_center\install\setup.ps1"
 if errorlevel 1 (
   pause
   exit /b 1
