@@ -12,8 +12,10 @@ library, binds to `127.0.0.1`, and places a random token on every write request.
 The dashboard can stage source files and one `.apkg`, open their exact destination
 folders, turn the live `START HERE.md` into a copyable in-app walkthrough, edit
 `PROFILE.md` and `USER_PROMPTS.md`, open deck review artifacts, launch setup, and install
-stable releases. Resetting preferences requires two confirmations and keeps the previously
-saved files as `.bak` recovery copies.
+stable releases. The active review deck is shared between Start and Decks: prompt previews
+replace `<module>` automatically, while the Decks decision workspace produces exact pass
+commands or appends typed feedback to a module-specific patch prompt. Resetting preferences
+requires two confirmations and keeps the previously saved files as `.bak` recovery copies.
 
 For a pre-Prism installation, a user can launch Prism from a separate fresh download,
 select the old project as the active folder, and install the latest release into it. This

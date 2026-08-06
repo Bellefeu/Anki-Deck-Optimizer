@@ -13,8 +13,9 @@ trail — and the agent does the editorial judgement the scripts cannot.
 
 **Easiest:** double-click `Prism Control Center - Windows.cmd` on Windows or
 `Prism Control Center - Mac.command` on macOS. The local Prism dashboard displays the
-complete Start Here guide with copyable prompts and handles setup, staging, preferences,
-deck review, and safe updates. If macOS blocks the first launch,
+complete Start Here guide with deck-aware copyable prompts and handles setup, staging,
+preferences, deck review, and safe updates. Select a completed deck once and Prism fills
+its exact name into approval, correction, verification, and grading prompts. If macOS blocks the first launch,
 follow the five picture-free steps at the top of [`START HERE.md`](START%20HERE.md).
 
 **Impatient in a terminal?** `python3 scripts/bootstrap.py`

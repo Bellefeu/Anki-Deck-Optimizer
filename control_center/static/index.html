@@ -79,7 +79,7 @@
         <section class="stage-card glass">
           <div class="section-title">
             <div><span class="eyebrow">QUICK STAGE</span><h2>Drop in your next module</h2></div>
-            <label class="module-field">Module name<input id="module-name" placeholder="Airway Anatomy and Management"></label>
+            <label class="module-field">Module name<input id="module-name" placeholder="Enter the name used in Anki"></label>
           </div>
           <div class="drop-grid">
             <div class="drop-zone" id="source-drop" data-kind="source" tabindex="0" role="button">
@@ -142,7 +142,22 @@
 
         <section class="prompt-library" id="prompt-library">
           <div class="section-title prompt-library-title">
-            <div><span class="eyebrow">COPY · PASTE · RUN</span><h2>Your prompt library</h2><p>These cards come directly from the guide. Nothing is retyped or hidden.</p></div>
+            <div><span class="eyebrow">COPY · PASTE · RUN</span><h2>Prompts that know your deck</h2><p>Choose once. Every module token below is filled before it reaches your clipboard.</p></div>
+          </div>
+          <div class="prompt-context glass">
+            <div class="context-orbit" aria-hidden="true"><span></span><span></span></div>
+            <div class="prompt-context-copy">
+              <span class="eyebrow">ACTIVE REVIEW DECK</span>
+              <strong id="prompt-context-title">Looking for completed decks…</strong>
+              <small id="prompt-context-status">Deck-specific prompts will follow this selection.</small>
+            </div>
+            <label class="prompt-deck-field" for="prompt-deck-select">
+              <span>Use module</span>
+              <select id="prompt-deck-select" aria-describedby="prompt-context-status" disabled>
+                <option>Loading decks…</option>
+              </select>
+            </label>
+            <button class="quiet-button" id="open-context-review" type="button">Open review workspace</button>
           </div>
           <div class="prompt-card-grid" id="prompt-card-grid">
             <div class="guide-loader"><span></span><p>Gathering your prompts…</p></div>
@@ -162,7 +177,7 @@
 
       <section class="view" id="view-decks">
         <div class="page-heading">
-          <div><span class="eyebrow">HUMAN CHECKPOINT</span><h1>Deck review</h1><p>Verified status is never changed here without your pipeline approval step.</p></div>
+          <div><span class="eyebrow">HUMAN CHECKPOINT</span><h1>Review. Decide. Continue.</h1><p>Select a deck once; Prism prepares the exact approval or correction prompt.</p></div>
           <div class="segmented" role="group" aria-label="Deck status filter">
             <button class="active" data-filter="all">All</button><button data-filter="review">Needs review</button><button data-filter="verified">Verified</button>
           </div>
@@ -170,7 +185,7 @@
         <div class="deck-layout">
           <div class="deck-list glass" id="deck-list"></div>
           <aside class="deck-detail glass" id="deck-detail">
-            <div class="empty-detail"><span>◫</span><h2>Select a deck</h2><p>Its files and judgement calls will open here.</p></div>
+            <div class="empty-detail"><span>◫</span><h2>Select a deck</h2><p>Its evidence, judgement calls, and decision prompts will open here.</p></div>
           </aside>
         </div>
       </section>
