@@ -7,6 +7,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -153,13 +154,58 @@ class PackagingTests(unittest.TestCase):
         self.assertIn('className = "judgement-feedback"', script)
         self.assertIn('appendGuideInline(item, lines[index].trim());', script)
 
+    def test_every_dom_hook_the_dashboard_queries_exists_in_the_page(self):
+        """A redesign that renames or drops an element must not silently
+        break the script that drives it."""
+        script = (ROOT / "control_center/static/app.js").read_text(encoding="utf-8")
+        page = (ROOT / "control_center/static/index.html").read_text(encoding="utf-8")
+        queried = sorted(set(re.findall(r'\$\("#([A-Za-z0-9_-]+)"\)', script)))
+        self.assertGreater(len(queried), 30, "the hook scan found suspiciously few selectors")
+        present = set(re.findall(r'id="([A-Za-z0-9_-]+)"', page))
+        missing = [name for name in queried if name not in present]
+        self.assertEqual(missing, [], f"app.js queries ids the page does not define: {missing}")
+
+    def test_field_renderer_is_wired_up_and_every_scene_names_a_real_body(self):
+        page = (ROOT / "control_center/static/index.html").read_text(encoding="utf-8")
+        self.assertIn('src="/static/prism-field.js"', page)
+        self.assertIn('id="prism-field"', page)
+        self.assertLess(
+            page.index('src="/static/prism-field.js"'),
+            page.index('src="/static/app.js"'),
+            "the field renderer must be defined before app.js mounts it",
+        )
+        field = (ROOT / "control_center/static/prism-field.js").read_text(encoding="utf-8")
+        script = (ROOT / "control_center/static/app.js").read_text(encoding="utf-8")
+        declared = set(re.findall(r"^\s+(\w+): \d+,", field, re.M))
+        used = set(re.findall(r'body: "(\w+)"', script))
+        self.assertTrue(used, "no field scenes were found in app.js")
+        self.assertEqual(used - declared, set(), "a view asks for a body the renderer does not define")
+        # Without a working GPU path the page must still be styled, not blank.
+        self.assertIn("field-unavailable", field)
+        self.assertIn("field-unavailable", (ROOT / "control_center/static/app.css").read_text(encoding="utf-8"))
+
+    def test_user_facing_surfaces_carry_no_em_or_en_dashes(self):
+        for relative in (
+            "START HERE.md",
+            "control_center/templates/PROFILE.template.md",
+            "control_center/static/index.html",
+            "control_center/static/app.js",
+            "control_center/static/app.css",
+            "control_center/static/prism-field.js",
+            "control_center/app.py",
+        ):
+            with self.subTest(relative=relative):
+                text = (ROOT / relative).read_text(encoding="utf-8")
+                self.assertNotIn("—", text)
+                self.assertNotIn("–", text)
+
     def test_guide_leads_with_updates_and_uses_contextual_module_tokens(self):
         guide = (ROOT / "START HERE.md").read_text(encoding="utf-8")
-        update = guide.index("## PART 1 — KEEP THE TOOLKIT UPDATED")
-        setup = guide.index("## PART 2 — ONE-TIME SETUP")
-        stage = guide.index("## PART 3 — STAGE YOUR MODULES")
-        run = guide.index("## PART 4 — RUN THE PIPELINE")
-        review = guide.index("## PART 5 — REVIEW AND CORRECT")
+        update = guide.index("## PART 1: KEEP THE TOOLKIT UPDATED")
+        setup = guide.index("## PART 2: ONE-TIME SETUP")
+        stage = guide.index("## PART 3: STAGE YOUR MODULES")
+        run = guide.index("## PART 4: RUN THE PIPELINE")
+        review = guide.index("## PART 5: REVIEW AND CORRECT")
         self.assertLess(update, setup)
         self.assertLess(setup, stage)
         self.assertLess(stage, run)
@@ -173,7 +219,7 @@ class PackagingTests(unittest.TestCase):
         claude = guide.split("#### Schedule Claude Cowork", 1)[1].split(
             "#### Schedule ChatGPT Codex", 1)[0]
         chatgpt = guide.split("#### Schedule ChatGPT Codex", 1)[1].split(
-            "### Path B — manual mode", 1)[0]
+            "### Path B: manual mode", 1)[0]
 
         for section in (claude, chatgpt):
             self.assertIn("Name: Auto Anki Optimize", section)

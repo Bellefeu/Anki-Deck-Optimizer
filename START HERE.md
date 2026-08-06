@@ -41,7 +41,7 @@ after setup finishes.
 
 ---
 
-## PART 1 — KEEP THE TOOLKIT UPDATED
+## PART 1: KEEP THE TOOLKIT UPDATED
 
 Make this your first stop whenever you return to the project. Open **Update** in Prism and
 click **Check for updates**. If a stable update is ready, click **Install update**. If you
@@ -68,7 +68,7 @@ Do this once. Do not merge a fresh download into your real project by hand.
 2. Download the newest repo ZIP from GitHub and extract it somewhere else, such as
    Downloads. This temporary copy is only a helper.
 3. Open Prism from the temporary copy.
-4. Click **Choose folder** and choose your **old project folder**—the one with your real
+4. Click **Choose folder** and choose your **old project folder**, the one with your real
    decks and progress.
 5. Open **Update**, click **Check for updates**, then **Install update**.
 6. Close the helper and use Prism inside your old project from now on. You may delete the
@@ -79,7 +79,7 @@ replace, preserves runtime state and study files, then tests the installed updat
 
 ---
 
-## PART 2 — ONE-TIME SETUP
+## PART 2: ONE-TIME SETUP
 
 ### 1. Put this folder on your computer
 
@@ -180,7 +180,7 @@ offers it; otherwise use the strongest Codex model available. Official help:
 
 ---
 
-## PART 3 — STAGE YOUR MODULES
+## PART 3: STAGE YOUR MODULES
 
 Two destinations, one shared module name.
 
@@ -228,12 +228,12 @@ Anki Decks/
 
 ---
 
-## PART 4 — RUN THE PIPELINE
+## PART 4: RUN THE PIPELINE
 
 Choose one path. **Automatic mode is recommended**; manual mode is there when scheduling
 is unavailable or when you want to drive every phase yourself.
 
-### Path A — automatic mode
+### Path A: automatic mode
 
 First, use one normal chat to test the automatic prompt:
 
@@ -294,7 +294,7 @@ immediately. The computer must be awake and online and the desktop app must rema
 for your account, use Path B.
 
 Each scheduled run starts a fresh session, performs one safe phase, and stops. A later run
-continues a resumable build or handles the next phase. Expect roughly **2–5 hours per
+continues a resumable build or handles the next phase. Expect roughly **2 to 5 hours per
 deck**, including time between runs. Add another eight-hour schedule later if queued work
 remains.
 
@@ -303,11 +303,11 @@ Two things never happen unattended:
 1. `--pass` is never run. A completed review waits for your approval.
 2. Stale scripts or an empty-reading folder stop the run instead of guessing.
 
-### Path B — manual mode
+### Path B: manual mode
 
 Use two different sessions per module. A builder must not audit its own work.
 
-#### Session A — build
+#### Session A: build
 
 ```text
 Read scripts/PROMPT_build.md and execute it.
@@ -315,7 +315,7 @@ Read scripts/PROMPT_build.md and execute it.
 
 This picks the next queued module, builds it, writes the audit trail, and stops.
 
-#### Session B — verify
+#### Session B: verify
 
 Start a **new session** and use:
 
@@ -328,21 +328,21 @@ writes a report, and stops at the human decision.
 
 ---
 
-## PART 5 — REVIEW AND CORRECT
+## PART 5: REVIEW AND CORRECT
 
 Open **Decks** in Prism and choose **Needs review**. Select a deck, open its NOTES or
 verification report, and read every **JUDGEMENT CALL**. This is the deliberate human gate
 against losing important information.
 
 The selected deck has a decision workspace directly beneath its judgement calls. Prism
-inserts the exact deck name in every prompt—no manual renaming.
+inserts the exact deck name in every prompt, so there is no manual renaming.
 
 If clinical accuracy matters and you plan to run the deeper check in Part 6, do that
 before final approval, then return here.
 
 ### If you agree
 
-When this is your final review—including Part 6 if you are using it—copy the approval
+When this is your final review, including Part 6 if you are using it, copy the approval
 prompt from the deck's review workspace:
 
 ```text
@@ -367,7 +367,7 @@ are satisfied, then use the approval prompt.
 
 ---
 
-## PART 6 — RUN AN OPTIONAL DEEP QUALITY CHECK
+## PART 6: RUN AN OPTIONAL DEEP QUALITY CHECK
 
 Do this **before final approval** whenever clinical accuracy matters. In a fresh session,
 choose the prompt that matches how the deck started. Prism fills every `<module>` using
@@ -381,8 +381,8 @@ its archived copy). Be objective, be subjective, and be extremely critical of cl
 accuracy in both.
 
 Read COMPLETED/EXAMPLE/README.md first so you know what the audit trail contains, then
-work from COMPLETED/<module>/audit/ — ops.json for what changed, changelog.json for why,
-meta.json for what was left outstanding.
+work from COMPLETED/<module>/audit/. ops.json holds what changed, changelog.json holds
+why, and meta.json holds what was left outstanding.
 
 Report: cards added/edited/split/demoted/deleted; the multi-cloze rate before and after;
 every factual claim you can check against an independent source and whether it holds; and
@@ -394,11 +394,11 @@ End with a copy-pasteable list of specific fixes.
 
 ```text
 Grade COMPLETED/<module>/<module> (FINAL).apkg against the source material in
-Source Files/<module>/. There is no prior deck — this was built from scratch.
+Source Files/<module>/. There is no prior deck, because this was built from scratch.
 
 Read COMPLETED/EXAMPLE/README.md first so you know what the audit trail contains, then
-work from COMPLETED/<module>/audit/ — ops.json for what was created, changelog.json for
-why, meta.json for what was left outstanding.
+work from COMPLETED/<module>/audit/. ops.json holds what was created, changelog.json
+holds why, and meta.json holds what was left outstanding.
 
 Report: total cards created; the multi-cloze rate; every factual claim you can check
 against the source material and whether it holds; and any source content missed entirely.
@@ -420,7 +420,7 @@ Part 5 for final approval.
 
 ---
 
-## PART 7 — FINISH THE COLLECTION
+## PART 7: FINISH THE COLLECTION
 
 After every module is built and passed, run this **once**:
 
@@ -461,7 +461,7 @@ and the finished deck is checked against itself for contradictions.
 
 **Read more in this order:**
 
-1. `COMPLETED/EXAMPLE/README.md` — what a finished module looks like.
-2. `scripts/HANDOFF.md` — the actual job; §3b is the editorial rubric.
-3. `scripts/HANDOFF_REFERENCE.md` — pull one section on demand, for example
+1. `COMPLETED/EXAMPLE/README.md` shows what a finished module looks like.
+2. `scripts/HANDOFF.md` is the actual job; §3b is the editorial rubric.
+3. `scripts/HANDOFF_REFERENCE.md` lets you pull one section on demand, for example
    `python3 scripts/handoff.py 4b`. Do not read the entire reference by default.

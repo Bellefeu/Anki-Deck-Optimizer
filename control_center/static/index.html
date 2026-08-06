@@ -4,50 +4,64 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="control-token" content="__CONTROL_TOKEN__">
-  <title>Anki Optimizer · Control Center</title>
+  <title>Prism · Control Center</title>
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
-  <div class="ambient ambient-one"></div>
-  <div class="ambient ambient-two"></div>
-  <div class="fiber-field" aria-hidden="true"></div>
+  <canvas id="prism-field" class="field" aria-hidden="true"></canvas>
+  <div class="veil" aria-hidden="true"></div>
 
   <div class="app-shell">
     <aside class="rail" aria-label="Main navigation">
       <div class="prism-mark" aria-label="Prism">
-        <span class="prism-thread thread-one"></span>
-        <span class="prism-thread thread-two"></span>
-        <span class="prism-thread thread-three"></span>
-        <span class="prism-seed"></span>
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true">
+          <path class="mark-rulings" d="M35.5 7.5L15.78 39.69M34.95 8.51L12.65 39.1M33.36 9.45L10.29 38.29M30.84 10.22L8.87 37.34M27.61 10.77L8.52 36.32M23.92 11.06L9.26 35.31M20.08 11.06L11.03 34.4M16.39 10.77L13.69 33.66M13.16 10.22L17.02 33.15M10.64 9.45L20.76 32.92M9.05 8.51L24.6 32.97M8.5 7.5L28.22 33.31M9.05 6.49L31.35 33.9M10.64 5.55L33.71 34.71M13.16 4.78L35.13 35.66M16.39 4.23L35.48 36.68M20.08 3.94L34.74 37.69M23.92 3.94L32.97 38.6M27.61 4.23L30.31 39.34M30.84 4.78L26.98 39.85M33.36 5.55L23.24 40.08M34.95 6.49L19.4 40.03"/>
+        </svg>
       </div>
       <div class="brand-mini">PRISM</div>
       <nav>
         <button class="nav-button active" data-view="home" aria-label="Home">
-          <span class="nav-icon">⌂</span><span>Home</span>
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M19 5L9.09 20.82M17.89 6.08L6.11 20.08M14.91 6.82L5 19M11 6.98L6.11 17.92M7.42 6.51L9.1 17.18M5.28 5.56L13 17.02M5.28 4.44L16.59 17.49M7.42 3.49L18.72 18.44M11 3.02L18.71 19.57M14.91 3.18L16.58 20.51M17.89 3.92L12.99 20.98"/></svg>
+          </span><span>Home</span>
         </button>
         <button class="nav-button" data-view="guide" aria-label="Start Here guide">
-          <span class="nav-icon guide-nav-icon" aria-hidden="true"><i></i><i></i><i></i></span><span>Start</span>
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <ellipse cx="12" cy="7.6" rx="8" ry="2.9" transform="rotate(-7 12 7.6)"/>
+              <ellipse cx="12" cy="12" rx="6.6" ry="2.5" transform="rotate(9 12 12)"/>
+              <ellipse cx="12" cy="16.3" rx="4.9" ry="2.1" transform="rotate(-11 12 16.3)"/>
+            </svg>
+          </span><span>Start</span>
         </button>
         <button class="nav-button" data-view="decks" aria-label="Deck review">
-          <span class="nav-icon">◫</span><span>Decks</span>
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4.5 7.5a7.5 2.6 0 1 0 15 0a7.5 2.6 0 1 0-15 0M4.5 12a7.5 2.6 0 1 0 15 0a7.5 2.6 0 1 0-15 0M4.5 16.5a7.5 2.6 0 1 0 15 0a7.5 2.6 0 1 0-15 0"/></svg>
+          </span><span>Decks</span>
         </button>
         <button class="nav-button" data-view="preferences" aria-label="Preferences">
-          <span class="nav-icon">⌁</span><span>Prefs</span>
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M19 5.2L18.47 6.09L16.95 6.89L14.68 7.5L12 7.87L9.32 7.98L7.05 7.86L5.53 7.55L5 7.14L5.53 6.74L7.05 6.43L9.32 6.3L12 6.41L14.68 6.79L16.95 7.4L18.47 8.19L19 9.09L18.47 9.98L16.95 10.77L14.68 11.38L12 11.76L9.32 11.87L7.05 11.74L5.53 11.44L5 11.03L5.53 10.62L7.05 10.31L9.32 10.19L12 10.3L14.68 10.67L16.95 11.28L18.47 12.08L19 12.97L18.47 13.86L16.95 14.66L14.68 15.27L12 15.64L9.32 15.76L7.05 15.63L5.53 15.32L5 14.91L5.53 14.51L7.05 14.2L9.32 14.07L12 14.19L14.68 14.56L16.95 15.17L18.47 15.96L19 16.86L18.47 17.75L16.95 18.54L14.68 19.16L12 19.53L9.32 19.64L7.05 19.52L5.53 19.21L5 18.8"/></svg>
+          </span><span>Prefs</span>
         </button>
         <button class="nav-button" data-view="updates" aria-label="Updates and setup">
-          <span class="nav-icon">↟</span><span>Update</span>
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M16 12L17.83 17.77M15.7 13.53L15.18 19.56M14.83 14.83L12.04 20.2M13.53 15.7L8.9 19.59M12 16L6.23 17.83M10.47 15.7L4.44 15.18M9.17 14.83L3.8 12.04M8.3 13.53L4.41 8.9M8 12L6.17 6.23M8.3 10.47L8.82 4.44M9.17 9.17L11.96 3.8M10.47 8.3L15.1 4.41M12 8L17.77 6.17M13.53 8.3L19.56 8.82M14.83 9.17L20.2 11.96M15.7 10.47L19.59 15.1"/></svg>
+          </span><span>Update</span>
         </button>
       </nav>
       <div class="rail-foot"><span class="pulse"></span><span id="rail-version">loading</span></div>
     </aside>
 
     <main>
-      <header class="topbar glass">
+      <header class="topbar">
         <div class="project-copy">
           <span class="eyebrow">ACTIVE PROJECT</span>
           <div class="path-row">
             <input id="project-path" aria-label="Project folder path" spellcheck="false">
-            <button id="apply-project" class="icon-button" title="Use this path" aria-label="Use this project path">✓</button>
+            <button id="apply-project" class="icon-button" title="Use this path" aria-label="Use this project path">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.2 8.4L6.4 11.6L12.8 4.8"/></svg>
+            </button>
           </div>
         </div>
         <button id="choose-project" class="quiet-button">Choose folder</button>
@@ -55,35 +69,29 @@
       </header>
 
       <section class="view active" id="view-home">
-        <div class="welcome-row">
-          <div>
-            <span class="eyebrow">ANKI LLM OPTIMIZER</span>
-            <h1>A clear place for careful work.</h1>
-            <p class="lede">Stage a module, see what still needs review, and keep the toolkit healthy—without hunting through folders.</p>
-          </div>
-          <div class="flow-orb" aria-hidden="true">
-            <span class="flow-membrane"></span>
-            <span class="flow-arc arc-one"></span>
-            <span class="flow-arc arc-two"></span>
-            <span class="flow-grain"></span>
-          </div>
+        <div class="opening">
+          <span class="eyebrow">ANKI LLM OPTIMIZER</span>
+          <h1>A clear place<br>for careful work.</h1>
+          <p class="lede">Stage a module, see what still needs review, and keep the toolkit healthy without hunting through folders.</p>
         </div>
 
         <div class="metric-grid">
-          <article class="metric glass"><span class="metric-mark blue"></span><strong id="metric-total">—</strong><small>tracked modules</small></article>
-          <article class="metric glass"><span class="metric-mark violet"></span><strong id="metric-review">—</strong><small>need your review</small></article>
-          <article class="metric glass"><span class="metric-mark mint"></span><strong id="metric-verified">—</strong><small>verified decks</small></article>
-          <article class="metric glass"><span class="metric-mark pearl"></span><strong id="metric-staged">—</strong><small>decks staged</small></article>
+          <article class="metric"><strong id="metric-total">·</strong><small>tracked modules</small></article>
+          <article class="metric" data-tone="attention"><strong id="metric-review">·</strong><small>need your review</small></article>
+          <article class="metric"><strong id="metric-verified">·</strong><small>verified decks</small></article>
+          <article class="metric"><strong id="metric-staged">·</strong><small>decks staged</small></article>
         </div>
 
-        <section class="stage-card glass">
+        <section class="band stage-card">
           <div class="section-title">
             <div><span class="eyebrow">QUICK STAGE</span><h2>Drop in your next module</h2></div>
             <label class="module-field">Module name<input id="module-name" placeholder="Enter the name used in Anki"></label>
           </div>
           <div class="drop-grid">
             <div class="drop-zone" id="source-drop" data-kind="source" tabindex="0" role="button">
-              <div class="drop-icon">✦</div>
+              <div class="drop-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M19 5L9.09 20.82M14.91 6.82L5 19M7.42 6.51L9.1 17.18M5.28 4.44L16.59 17.49M11 3.02L18.71 19.57"/></svg>
+              </div>
               <strong>Source files</strong>
               <span>Drop PDFs, images, or text files</span>
               <div class="drop-actions">
@@ -93,7 +101,9 @@
               <input class="file-picker" id="source-picker" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.tif,.tiff,.webp,.txt,.md,.csv,.rtf">
             </div>
             <div class="drop-zone deck" id="deck-drop" data-kind="deck" tabindex="0" role="button">
-              <div class="drop-icon">▱</div>
+              <div class="drop-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4.5 8a7.5 2.6 0 1 0 15 0a7.5 2.6 0 1 0-15 0M4.5 12.6a7.5 2.6 0 1 0 15 0a7.5 2.6 0 1 0-15 0M4.5 17.2a7.5 2.6 0 1 0 15 0a7.5 2.6 0 1 0-15 0"/></svg>
+              </div>
               <strong>Anki deck</strong>
               <span>Drop one exported .apkg</span>
               <div class="drop-actions">
@@ -107,13 +117,13 @@
         </section>
 
         <div class="home-lower">
-          <section class="glass setup-mini">
+          <section class="band setup-mini">
             <span class="eyebrow">TOOLKIT HEALTH</span>
-            <h2 id="health-title">Checking this computer…</h2>
+            <h2 id="health-title">Checking this computer</h2>
             <div class="health-pills" id="health-pills"></div>
             <button id="run-setup-home" class="primary-button">Run guided setup</button>
           </section>
-          <section class="glass next-review">
+          <section class="band next-review">
             <span class="eyebrow">NEXT HUMAN CHECKPOINT</span>
             <div id="next-review-content"><h2>No deck loaded yet</h2><p>Your next judgement review will appear here.</p></div>
             <button class="quiet-button" data-go="decks">Open deck review</button>
@@ -122,55 +132,46 @@
       </section>
 
       <section class="view" id="view-guide">
-        <section class="guide-hero">
-          <div class="guide-cinema" aria-hidden="true">
-            <span class="film-membrane membrane-a"></span>
-            <span class="film-membrane membrane-b"></span>
-            <span class="film-void"></span>
-            <span class="film-dust"></span>
+        <div class="opening opening-wide">
+          <span class="eyebrow">YOUR COMPLETE WALKTHROUGH</span>
+          <h1>Start here.<br>Everything flows<br>from this.</h1>
+          <p class="lede">Read the live guide, move through it in order, and copy any prompt with one click.</p>
+          <div class="opening-actions">
+            <button id="jump-prompts" class="primary-button">Open prompt library</button>
+            <span id="guide-source-label">Reading START HERE.md</span>
           </div>
-          <div class="guide-hero-copy">
-            <span class="eyebrow">YOUR COMPLETE WALKTHROUGH</span>
-            <h1>Start here.<br>Everything flows from this.</h1>
-            <p>Read the live guide, move through it in order, and copy any prompt with one click.</p>
-            <div class="guide-hero-actions">
-              <button id="jump-prompts" class="primary-button">Open prompt library</button>
-              <span id="guide-source-label">Reading START HERE.md…</span>
-            </div>
-          </div>
-        </section>
+        </div>
 
         <section class="prompt-library" id="prompt-library">
           <div class="section-title prompt-library-title">
             <div><span class="eyebrow">COPY · PASTE · RUN</span><h2>Prompts that know your deck</h2><p>Choose once. Every module token below is filled before it reaches your clipboard.</p></div>
           </div>
-          <div class="prompt-context glass">
-            <div class="context-orbit" aria-hidden="true"><span></span><span></span></div>
+          <div class="prompt-context">
             <div class="prompt-context-copy">
               <span class="eyebrow">ACTIVE REVIEW DECK</span>
-              <strong id="prompt-context-title">Looking for completed decks…</strong>
+              <strong id="prompt-context-title">Looking for completed decks</strong>
               <small id="prompt-context-status">Deck-specific prompts will follow this selection.</small>
             </div>
             <label class="prompt-deck-field" for="prompt-deck-select">
               <span>Use module</span>
               <select id="prompt-deck-select" aria-describedby="prompt-context-status" disabled>
-                <option>Loading decks…</option>
+                <option>Loading decks</option>
               </select>
             </label>
             <button class="quiet-button" id="open-context-review" type="button">Open review workspace</button>
           </div>
           <div class="prompt-card-grid" id="prompt-card-grid">
-            <div class="guide-loader"><span></span><p>Gathering your prompts…</p></div>
+            <div class="guide-loader"><span></span><p>Gathering your prompts</p></div>
           </div>
         </section>
 
         <div class="guide-layout">
-          <aside class="guide-index glass">
+          <aside class="guide-index panel">
             <span class="eyebrow">ON THIS PAGE</span>
             <nav id="guide-toc" aria-label="Start Here sections"></nav>
           </aside>
           <article class="guide-reading" id="guide-content" aria-live="polite">
-            <div class="guide-loader"><span></span><p>Turning the guide into a walkthrough…</p></div>
+            <div class="guide-loader"><span></span><p>Turning the guide into a walkthrough</p></div>
           </article>
         </div>
       </section>
@@ -183,10 +184,16 @@
           </div>
         </div>
         <div class="deck-layout">
-          <div class="deck-list glass" id="deck-list"></div>
-          <aside class="deck-detail glass" id="deck-detail">
-            <div class="empty-detail"><span>◫</span><h2>Select a deck</h2><p>Its evidence, judgement calls, and decision prompts will open here.</p></div>
-          </aside>
+          <div class="panel deck-shell"><div class="deck-list" id="deck-list"></div></div>
+          <aside class="panel detail-shell"><div class="deck-detail" id="deck-detail">
+            <div class="empty-detail">
+              <span aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4.5 7.5a7.5 2.6 0 1 0 15 0a7.5 2.6 0 1 0-15 0M4.5 12a7.5 2.6 0 1 0 15 0a7.5 2.6 0 1 0-15 0M4.5 16.5a7.5 2.6 0 1 0 15 0a7.5 2.6 0 1 0-15 0"/></svg>
+              </span>
+              <h2>Select a deck</h2>
+              <p>Its evidence, judgement calls, and decision prompts will open here.</p>
+            </div>
+          </div></aside>
         </div>
       </section>
 
@@ -199,12 +206,12 @@
           </div>
         </div>
         <div class="preference-grid">
-          <section class="editor-card glass">
+          <section class="editor-card panel">
             <div class="editor-head"><div><h2>Profile</h2><p>How the agent should work for you.</p></div><span>PROFILE.md</span></div>
             <textarea id="profile-editor" spellcheck="true" aria-label="Profile preferences"></textarea>
           </section>
-          <section class="editor-card glass">
-            <div class="editor-head"><div><h2>Prompt add-ons</h2><p>Extra context by workflow—kept separate from updateable prompts.</p></div><span>USER_PROMPTS.md</span></div>
+          <section class="editor-card panel">
+            <div class="editor-head"><div><h2>Prompt add-ons</h2><p>Extra context by workflow, kept separate from updateable prompts.</p></div><span>USER_PROMPTS.md</span></div>
             <textarea id="prompts-editor" spellcheck="true" aria-label="Prompt add-ons"></textarea>
           </section>
         </div>
@@ -212,31 +219,35 @@
 
       <section class="view" id="view-updates">
         <div class="page-heading">
-          <div><span class="eyebrow">SAFE MAINTENANCE</span><h1>Updates & setup</h1><p>Only publisher-owned toolkit files are replaced. Your state and study materials stay put.</p></div>
+          <div><span class="eyebrow">SAFE MAINTENANCE</span><h1>Updates and setup</h1><p>Only publisher-owned toolkit files are replaced. Your state and study materials stay put.</p></div>
         </div>
         <div class="maintenance-grid">
-          <section class="update-card glass">
-            <div class="update-glyph flow-glyph" aria-hidden="true"><span></span><span></span><span></span></div>
+          <section class="band update-card">
+            <div class="update-glyph" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M16 12L17.83 17.77M15.7 13.53L15.18 19.56M14.83 14.83L12.04 20.2M13.53 15.7L8.9 19.59M12 16L6.23 17.83M10.47 15.7L4.44 15.18M9.17 14.83L3.8 12.04M8.3 13.53L4.41 8.9M8 12L6.17 6.23M8.3 10.47L8.82 4.44M9.17 9.17L11.96 3.8M10.47 8.3L15.1 4.41M12 8L17.77 6.17M13.53 8.3L19.56 8.82M14.83 9.17L20.2 11.96M15.7 10.47L19.59 15.1"/></svg>
+            </div>
             <span class="eyebrow">PIPELINE UPDATE</span>
             <h2 id="update-heading">Ready to check</h2>
             <p id="update-copy">Download a stable, tested release with an automatic backup and rollback.</p>
-            <div class="preserve-strip"><span>✓ Decks</span><span>✓ Audit JSON</span><span>✓ Verified status</span><span>✓ Profile</span></div>
+            <div class="preserve-strip"><span>Decks</span><span>Audit JSON</span><span>Verified status</span><span>Profile</span></div>
             <div class="button-row">
               <button id="check-update" class="primary-button">Check for updates</button>
               <button id="install-update" class="quiet-button" disabled>Install update</button>
             </div>
           </section>
-          <section class="setup-card glass">
-            <div class="update-glyph setup flow-glyph" aria-hidden="true"><span></span><span></span><span></span></div>
+          <section class="band setup-card">
+            <div class="update-glyph setup" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M19 5L9.09 20.82M14.91 6.82L5 19M7.42 6.51L9.1 17.18M5.28 4.44L16.59 17.49M11 3.02L18.71 19.57M17.89 3.92L12.99 20.98"/></svg>
+            </div>
             <span class="eyebrow">ONE-TIME SETUP</span>
             <h2>Let the installer handle it</h2>
             <p>Open the correct terminal in this project and install only what is missing.</p>
             <button id="run-setup" class="primary-button">Open guided setup</button>
-            <small>Passwords, if needed, are entered in the terminal—not in this dashboard.</small>
+            <small>Passwords, if needed, are entered in the terminal, not in this dashboard.</small>
           </section>
         </div>
-        <section class="job-card glass" id="job-card" hidden>
-          <div class="job-top"><div><span class="eyebrow">ACTIVITY</span><h2 id="job-label">Working…</h2></div><span class="spinner"></span></div>
+        <section class="band job-card" id="job-card" hidden>
+          <div class="job-top"><div><span class="eyebrow">ACTIVITY</span><h2 id="job-label">Working</h2></div><span class="spinner"></span></div>
           <div class="progress-track"><span id="progress-fill"></span></div>
           <pre id="job-log" aria-live="polite"></pre>
         </section>
@@ -246,8 +257,7 @@
 
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
   <div class="modal-backdrop" id="reset-modal" hidden>
-    <section class="safety-modal glass" role="dialog" aria-modal="true" aria-labelledby="reset-title" aria-describedby="reset-copy">
-      <div class="modal-flow" aria-hidden="true"><span></span><span></span></div>
+    <section class="safety-modal panel" role="dialog" aria-modal="true" aria-labelledby="reset-title" aria-describedby="reset-copy">
       <span class="eyebrow">PREFERENCE SAFETY CHECK</span>
       <h2 id="reset-title">Reset to default preferences?</h2>
       <p id="reset-copy">Are you sure you want to reset to default preferences?</p>
@@ -261,6 +271,7 @@
       </div>
     </section>
   </div>
+  <script src="/static/prism-field.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

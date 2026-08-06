@@ -188,7 +188,7 @@ def extract_changelog_judgements(audit):
         if item[0] in {"DEMOTE", "DELETE", "SPLIT"}:
             nid = item[1] if len(item) > 1 else "?"
             why = item[2] if len(item) > 2 else "Review this content decision."
-            calls.append(f"{item[0].title()} · note {nid} — {why}")
+            calls.append(f"{item[0].title()} · note {nid} · {why}")
     return calls[:40]
 
 
