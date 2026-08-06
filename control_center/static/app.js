@@ -10,6 +10,7 @@ const state = {
   activeJob: null,
   resetStep: 1,
   guideLoaded: false,
+  patchNotes: {},
 };
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
@@ -49,6 +50,7 @@ function toast(message, kind = "") {
 function setView(name) {
   $$(".nav-button").forEach((button) => button.classList.toggle("active", button.dataset.view === name));
   $$(".view").forEach((view) => view.classList.toggle("active", view.id === `view-${name}`));
+  window.scrollTo(0, 0);
   if (name === "guide") loadGuide();
   if (name === "decks") loadDecks();
   if (name === "preferences") loadPreferences();
@@ -56,6 +58,56 @@ function setView(name) {
 
 function prettyStatus(value) {
   return String(value || "unknown").replaceAll("-", " ");
+}
+
+function activeReviewDeck() {
+  return state.selectedDeck || state.decks.find((deck) => !deck.verified) || state.decks[0] || null;
+}
+
+function activeModuleName() {
+  return activeReviewDeck()?.name || "";
+}
+
+function activePatchNote() {
+  return state.patchNotes[activeModuleName()]?.trim() || "";
+}
+
+function promptNeedsDeck(template) {
+  return /<module(?: name)?>/i.test(String(template));
+}
+
+function promptNeedsPatchNote(template) {
+  return String(template).includes("[Describe what should change.]");
+}
+
+function contextualizeGuidePrompt(template) {
+  const module = activeModuleName() || "SELECT A REVIEW DECK";
+  const feedback = activePatchNote() || "Add your change in Deck Review";
+  return String(template)
+    .replace(/<module(?: name)?>/gi, module)
+    .replaceAll("[Describe what should change.]", feedback);
+}
+
+function refreshCopyButton(button) {
+  const missingDeck = button._requiresDeck && !activeModuleName();
+  const missingFeedback = button._requiresFeedback && !activePatchNote();
+  button.disabled = Boolean(button._forceDisabled || missingDeck || missingFeedback);
+  if (missingDeck) button.title = "Choose a review deck first.";
+  else if (missingFeedback) button.title = "Describe the correction in Deck Review first.";
+  else button.removeAttribute("title");
+}
+
+function updateContextualPrompts() {
+  $$('[data-prompt-template]').forEach((node) => {
+    node.textContent = contextualizeGuidePrompt(node.dataset.promptTemplate);
+  });
+  $$('[data-patch-hint]').forEach((node) => {
+    node.textContent = activePatchNote()
+      ? "Uses the correction you wrote in Deck Review."
+      : "Write the correction in Deck Review to unlock this copy button.";
+  });
+  $$(".guide-copy-button").forEach(refreshCopyButton);
+  renderPromptDeckSelector();
 }
 
 function guideSlug(value) {
@@ -143,12 +195,23 @@ function guidePromptMeta(code) {
   return null;
 }
 
-function makeCopyButton(code, label = "Copy prompt") {
+function makeCopyButton(code, label = "Copy prompt", options = {}) {
   const button = document.createElement("button");
   button.className = "guide-copy-button";
   button.type = "button";
   button.textContent = label;
-  button.addEventListener("click", () => copyGuideText(code, button));
+  const getter = typeof code === "function" ? code : () => code;
+  const template = options.template || (typeof code === "string" ? code : "");
+  button._copyText = getter;
+  button._requiresDeck = Boolean(options.requiresDeck ?? promptNeedsDeck(template));
+  button._requiresFeedback = Boolean(options.requiresFeedback ?? promptNeedsPatchNote(template));
+  button._forceDisabled = Boolean(options.disabled);
+  button.addEventListener("click", () => {
+    refreshCopyButton(button);
+    if (button.disabled) return;
+    copyGuideText(getter(), button);
+  });
+  refreshCopyButton(button);
   return button;
 }
 
@@ -173,12 +236,27 @@ function renderPromptLibrary(markdown) {
     top.className = "prompt-card-top";
     const label = document.createElement("span");
     label.textContent = prompt.meta[0];
-    top.append(label, makeCopyButton(prompt.code));
+    top.append(label, makeCopyButton(
+      () => contextualizeGuidePrompt(prompt.code),
+      "Copy prompt",
+      {template: prompt.code},
+    ));
     const heading = document.createElement("h3");
     heading.textContent = prompt.meta[1];
     const pre = document.createElement("pre");
-    pre.textContent = prompt.code;
-    card.append(top, heading, pre);
+    pre.dataset.promptTemplate = prompt.code;
+    pre.textContent = contextualizeGuidePrompt(prompt.code);
+    card.append(top, heading);
+    if (promptNeedsPatchNote(prompt.code)) {
+      const hint = document.createElement("small");
+      hint.className = "prompt-requirement";
+      hint.dataset.patchHint = "true";
+      hint.textContent = activePatchNote()
+        ? "Uses the correction you wrote in Deck Review."
+        : "Write the correction in Deck Review to unlock this copy button.";
+      card.append(hint);
+    }
+    card.append(pre);
     grid.append(card);
   }
   return prompts.length;
@@ -285,15 +363,21 @@ function renderGuide(markdown) {
       }
       index += 1;
       const code = block.join("\n").trimEnd();
+      const promptMeta = guidePromptMeta(code);
       const shell = document.createElement("section");
-      shell.className = `guide-code-card${guidePromptMeta(code) ? " is-prompt" : ""}`;
+      shell.className = `guide-code-card${promptMeta ? " is-prompt" : ""}`;
       const top = document.createElement("div");
       top.className = "guide-code-top";
       const label = document.createElement("span");
-      label.textContent = guidePromptMeta(code)?.[0] || (language ? language.toUpperCase() : "COPYABLE TEXT");
-      top.append(label, makeCopyButton(code, guidePromptMeta(code) ? "Copy prompt" : "Copy"));
+      label.textContent = promptMeta?.[0] || (language ? language.toUpperCase() : "COPYABLE TEXT");
+      top.append(label, makeCopyButton(
+        promptMeta ? () => contextualizeGuidePrompt(code) : code,
+        promptMeta ? "Copy prompt" : "Copy",
+        promptMeta ? {template: code} : {requiresDeck: false},
+      ));
       const pre = document.createElement("pre");
-      pre.textContent = code;
+      if (promptMeta) pre.dataset.promptTemplate = code;
+      pre.textContent = promptMeta ? contextualizeGuidePrompt(code) : code;
       shell.append(top, pre);
       chapter.append(shell);
       continue;
@@ -358,6 +442,7 @@ async function loadGuide() {
     const result = await api("/api/guide");
     const prompts = renderPromptLibrary(result.markdown);
     const chapters = renderGuide(result.markdown);
+    updateContextualPrompts();
     $("#guide-source-label").textContent = `${result.file} · ${chapters} chapters · ${prompts} copyable prompts`;
   } catch (error) {
     state.guideLoaded = false;
@@ -428,10 +513,62 @@ async function loadDecks(render = true) {
     if (state.selectedDeck) {
       state.selectedDeck = state.decks.find((deck) => deck.name === state.selectedDeck.name) || null;
     }
+    if (!state.selectedDeck) {
+      state.selectedDeck = state.decks.find((deck) => !deck.verified) || state.decks[0] || null;
+    }
+    updateContextualPrompts();
     if (render) renderDecks();
   } catch (error) {
     toast(error.message, "error");
   }
+}
+
+function renderPromptDeckSelector() {
+  const select = $("#prompt-deck-select");
+  if (!select) return;
+  const deck = activeReviewDeck();
+  select.replaceChildren();
+  if (!state.decks.length) {
+    const option = document.createElement("option");
+    option.textContent = "No completed decks yet";
+    select.append(option);
+    select.disabled = true;
+    $("#prompt-context-title").textContent = "No review deck is available yet";
+    $("#prompt-context-status").textContent = "Finish a build, then return here for personalized prompts.";
+    $("#open-context-review").disabled = true;
+    return;
+  }
+
+  const groups = [
+    ["Needs review", state.decks.filter((item) => !item.verified)],
+    ["Verified", state.decks.filter((item) => item.verified)],
+  ];
+  for (const [label, decks] of groups) {
+    if (!decks.length) continue;
+    const group = document.createElement("optgroup");
+    group.label = label;
+    for (const item of decks) {
+      const option = document.createElement("option");
+      option.value = item.name;
+      option.textContent = `${item.name} · ${prettyStatus(item.status)}`;
+      group.append(option);
+    }
+    select.append(group);
+  }
+  select.disabled = false;
+  select.value = deck?.name || state.decks[0].name;
+  $("#prompt-context-title").textContent = deck?.name || "Choose a deck";
+  $("#prompt-context-status").textContent = deck?.verified
+    ? "Verified · prompts below are still personalized for grading or follow-up work."
+    : `${deck?.judgement_count || 0} judgement call${deck?.judgement_count === 1 ? "" : "s"} · awaiting your decision.`;
+  $("#open-context-review").disabled = !deck;
+}
+
+function selectReviewDeck(name, render = true) {
+  const deck = state.decks.find((item) => item.name === name) || null;
+  state.selectedDeck = deck;
+  updateContextualPrompts();
+  if (render) renderDecks();
 }
 
 function filteredDecks() {
@@ -465,11 +602,7 @@ function renderDecks() {
     count.className = "count";
     count.textContent = deck.judgement_count ? `${deck.judgement_count} calls` : "";
     button.append(dot, copy, count);
-    button.addEventListener("click", () => {
-      state.selectedDeck = deck;
-      renderDecks();
-      renderDeckDetail(deck);
-    });
+    button.addEventListener("click", () => selectReviewDeck(deck.name));
     list.append(button);
   }
   if (state.selectedDeck) renderDeckDetail(state.selectedDeck);
@@ -492,19 +625,41 @@ function actionButton(label, path, primary = false) {
   return button;
 }
 
+function approvalPrompt(deck) {
+  return `Approved. Pass it. Run: python3 scripts/verify_deck.py --pass "${deck.name}"`;
+}
+
+function patchPrompt(deck) {
+  const feedback = state.patchNotes[deck.name]?.trim() || "[Your correction will appear here]";
+  return `${feedback} Apply that correction to "${deck.name}". Now read scripts/PROMPT_patch.md and execute it for "${deck.name}".`;
+}
+
+function reviewSectionHeading(step, title) {
+  const head = document.createElement("div");
+  head.className = "review-section-head";
+  const marker = document.createElement("span");
+  marker.textContent = `STEP ${step}`;
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+  head.append(marker, heading);
+  return head;
+}
+
 function renderDeckDetail(deck) {
   const detail = $("#deck-detail");
   detail.replaceChildren();
+
   const status = document.createElement("span");
   status.className = "detail-status";
   status.textContent = `${deck.verified ? "✓" : "○"} ${prettyStatus(deck.status)}`;
   const heading = document.createElement("h2");
   heading.textContent = deck.name;
   const summary = document.createElement("p");
+  summary.className = "deck-summary";
   if (deck.cards_before != null || deck.cards_after != null) {
     summary.textContent = `Cards: ${deck.cards_before ?? "?"} before · ${deck.cards_after ?? "?"} after`;
   } else {
-    summary.textContent = "Open the audit notes and judgement calls before approving this deck.";
+    summary.textContent = "Open the evidence and judgement calls before making the final decision.";
   }
   const actions = document.createElement("div");
   actions.className = "detail-actions";
@@ -513,8 +668,7 @@ function renderDeckDetail(deck) {
     actionButton("Open verification report", deck.report_path),
     actionButton("Open deck folder", deck.folder_path),
   );
-  const callHeading = document.createElement("h3");
-  callHeading.textContent = `Judgement calls (${deck.judgement_count})`;
+
   const calls = document.createElement("ul");
   calls.className = "judgement-list";
   if (deck.judgements.length) {
@@ -527,10 +681,74 @@ function renderDeckDetail(deck) {
     const item = document.createElement("li");
     item.textContent = deck.verified
       ? "No outstanding judgement calls were found."
-      : "No judgement-call section was found yet. Open the report or audit folder to review the work.";
+      : "No judgement-call section was found yet. Open the report or audit folder before deciding.";
     calls.append(item);
   }
-  detail.append(status, heading, summary, actions, callHeading, calls);
+
+  const decisionGrid = document.createElement("div");
+  decisionGrid.className = "review-decision-grid";
+
+  const approve = document.createElement("section");
+  approve.className = `decision-card approve${deck.verified ? " complete" : ""}`;
+  const approveLabel = document.createElement("span");
+  approveLabel.className = "decision-label";
+  approveLabel.textContent = deck.verified ? "✓ VERIFIED" : "HUMAN APPROVAL";
+  const approveHeading = document.createElement("h4");
+  approveHeading.textContent = deck.verified ? "This deck is already closed" : "Everything holds up";
+  const approveCopy = document.createElement("p");
+  approveCopy.textContent = deck.verified
+    ? "No pass command is needed. You can still request a correction if later review finds a problem."
+    : "This exact module name is already in the command.";
+  const approvePreview = document.createElement("pre");
+  approvePreview.className = "review-prompt-preview";
+  approvePreview.textContent = approvalPrompt(deck);
+  const approveButton = makeCopyButton(
+    () => approvalPrompt(deck),
+    deck.verified ? "Already passed" : "Copy approval prompt",
+    {requiresDeck: false, disabled: deck.verified},
+  );
+  approveButton.classList.add("decision-copy");
+  approve.append(approveLabel, approveHeading, approveCopy, approvePreview, approveButton);
+
+  const correct = document.createElement("section");
+  correct.className = "decision-card correct";
+  const correctLabel = document.createElement("span");
+  correctLabel.className = "decision-label";
+  correctLabel.textContent = "CORRECTION LOOP";
+  const correctHeading = document.createElement("h4");
+  correctHeading.textContent = "Something should change";
+  const correctCopy = document.createElement("p");
+  correctCopy.textContent = "Describe the outcome you want. Prism adds the deck and patch instructions.";
+  const feedback = document.createElement("textarea");
+  feedback.className = "judgement-feedback";
+  feedback.maxLength = 6000;
+  feedback.rows = 4;
+  feedback.value = state.patchNotes[deck.name] || "";
+  feedback.placeholder = "Example: Card 12 uses the wrong tidal volume. Change 50 mL to 500 mL and verify every related card.";
+  feedback.setAttribute("aria-label", `Correction requested for ${deck.name}`);
+  const correctPreview = document.createElement("pre");
+  correctPreview.className = "review-prompt-preview patch-preview";
+  correctPreview.textContent = patchPrompt(deck);
+  const correctButton = makeCopyButton(
+    () => patchPrompt(deck),
+    "Copy correction prompt",
+    {requiresDeck: false, requiresFeedback: true},
+  );
+  correctButton.classList.add("decision-copy");
+  feedback.addEventListener("input", () => {
+    state.patchNotes[deck.name] = feedback.value;
+    correctPreview.textContent = patchPrompt(deck);
+    updateContextualPrompts();
+    refreshCopyButton(correctButton);
+  });
+  correct.append(correctLabel, correctHeading, correctCopy, feedback, correctPreview, correctButton);
+
+  decisionGrid.append(approve, correct);
+  detail.append(
+    status, heading, summary, actions,
+    reviewSectionHeading(1, `Inspect judgement calls (${deck.judgement_count})`), calls,
+    reviewSectionHeading(2, "Make the call"), decisionGrid,
+  );
 }
 
 function renderNextReview() {
@@ -757,6 +975,7 @@ async function setProject(path) {
     const result = await api("/api/project", {method: "POST", body: {path}});
     toast("Project folder selected.", "success");
     state.selectedDeck = null;
+    state.patchNotes = {};
     state.update = null;
     state.guideLoaded = false;
     await loadStatus();
@@ -774,6 +993,7 @@ async function chooseProject() {
     if (result.changed) {
       toast("Project folder selected.", "success");
       state.selectedDeck = null;
+      state.patchNotes = {};
       state.guideLoaded = false;
       await loadStatus();
     }
@@ -896,15 +1116,21 @@ function bindEvents() {
     $$(".segmented button").forEach((item) => item.classList.remove("active"));
     button.classList.add("active");
     state.filter = button.dataset.filter;
-    state.selectedDeck = null;
+    const visible = filteredDecks();
+    if (!visible.some((deck) => deck.name === state.selectedDeck?.name)) {
+      state.selectedDeck = visible[0] || null;
+    }
+    updateContextualPrompts();
     renderDecks();
-    $("#deck-detail").replaceChildren();
-    const empty = document.createElement("div");
-    empty.className = "empty-detail";
-    const heading = document.createElement("h2");
-    heading.textContent = "Select a deck";
-    empty.append(heading);
-    $("#deck-detail").append(empty);
+    if (!state.selectedDeck) {
+      $("#deck-detail").replaceChildren();
+      const empty = document.createElement("div");
+      empty.className = "empty-detail";
+      const heading = document.createElement("h2");
+      heading.textContent = "No decks in this view";
+      empty.append(heading);
+      $("#deck-detail").append(empty);
+    }
   }));
   $$(".drop-zone").forEach(bindDropZone);
   $$('[data-picker]').forEach((button) => button.addEventListener("click", (event) => {
@@ -935,6 +1161,18 @@ function bindEvents() {
   window.addEventListener("resize", syncProjectPathWidth);
   $("#jump-prompts").addEventListener("click", () => {
     $("#prompt-library").scrollIntoView({behavior: "smooth", block: "start"});
+  });
+  $("#prompt-deck-select").addEventListener("change", (event) => {
+    selectReviewDeck(event.currentTarget.value);
+  });
+  $("#open-context-review").addEventListener("click", () => {
+    const deck = activeReviewDeck();
+    if (!deck) return;
+    state.filter = deck.verified ? "verified" : "review";
+    $$(".segmented button").forEach((button) => {
+      button.classList.toggle("active", button.dataset.filter === state.filter);
+    });
+    setView("decks");
   });
   $("#run-setup-home").addEventListener("click", runSetup);
   $("#run-setup").addEventListener("click", runSetup);

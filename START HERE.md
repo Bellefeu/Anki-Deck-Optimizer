@@ -1,30 +1,26 @@
 # START HERE
 
-Everything you need, in order. You do not need to understand the code.
+Everything you need, in the order you will actually use it. You do not need to
+understand the code.
 
-You can use either of these desktop agents:
+You can use either **Claude Cowork** or **Codex in the ChatGPT desktop app**. Both can
+read this folder, run the scripts, and follow the prompt files. A normal web chat cannot
+work directly in a folder on your computer.
 
-- **Claude Cowork**
-- **Codex in the ChatGPT desktop app**
+The easiest path is the **Prism Control Center**. It handles updates, setup, staging,
+preferences, deck review, and copy-ready prompts. Anything in a code-style box is meant
+to be copied exactly. Inside Prism, choose a review deck once and every `<module>` token
+is replaced with that deck's real name before you copy.
 
-Both can read this folder, run the scripts, and follow the prompt files. A normal web chat
-cannot work directly in a folder on your computer. Anything in a code-style box is meant
-to be copied exactly.
-
-The easiest path uses the new **Control Center**. It lets you choose the project, run
-setup, drop in files, edit preferences, review finished decks, and install safe updates.
-Open its **Start** tab to read this same guide with colorful, one-click copy buttons. You
-do not need to know terminal commands.
-
-### Open the Control Center
+### Open Prism
 
 - **Windows:** double-click **Prism Control Center - Windows.cmd**.
 - **Mac:** double-click **Prism Control Center - Mac.command**.
 
 #### If your Mac says Apple could not verify the file
 
-This message can appear the first time because the launcher came from GitHub and is not
-signed by an Apple Developer ID. Prism has not run yet.
+This can appear the first time because the launcher came from GitHub and is not signed
+by an Apple Developer ID. Prism has not run yet.
 
 1. Click **Done**. Do not click **Move to Trash**.
 2. Open the **Apple menu** at the top-left of your screen.
@@ -32,259 +28,231 @@ signed by an Apple Developer ID. Prism has not run yet.
 4. Scroll down and click **Open Anyway** beside the blocked Prism launcher.
 5. Confirm, then click **Open**.
 
-You only need to approve this copy once. After that, open it normally. These are
-[Apple's current steps for opening an unnotarized app](https://support.apple.com/en-us/102445).
+You only need to approve this copy once. These are
+[Apple's current steps](https://support.apple.com/en-us/102445).
 
-The main folder intentionally contains only two launchers: one marked **Mac** and one
-marked **Windows**. The setup scripts and templates are stored inside `control_center/`
-so a new user does not have to choose among technical files.
-
-Your web browser will open a page named **Prism**. Keep the small terminal window open
-while you use it. Prism runs only on your computer. It does not upload your decks to a
-website.
-
-On the first launch, Prism checks for Python. If Python is missing, it opens the guided
-setup first. Follow the words in the terminal. When setup finishes, open the Control
-Center again if it did not open by itself.
+The project root intentionally has only two launchers. Setup scripts and templates live
+inside `control_center/`, so a new user never has to guess which technical file to run.
+Your browser opens a local page named **Prism**. Keep the small terminal window open while
+you use it. Prism runs only on your computer; it does not upload your decks to a website.
 
 ---
 
-## PART 1 — ONE-TIME SETUP
+## PART 1 — KEEP THE TOOLKIT UPDATED
 
-### 1. Put this folder somewhere on your computer
+Make this your first stop whenever you return to the project. Open **Update** in Prism and
+click **Check for updates**. If a stable update is ready, click **Install update**. If you
+just downloaded the project, the check simply confirms that you are current.
+
+The updater:
+
+- replaces only publisher-owned toolkit files;
+- never replaces your decks, source files, audit JSON, finished work, profile, prompt
+  add-ons, or verified status;
+- tests the download before changing live files;
+- makes a dated backup in `.pipeline_backups`;
+- restores the previous toolkit and state if a final check fails; and
+- pauses if it finds an unfinished resumable build.
+
+It uses the latest stable GitHub **Release**. It does not run `git pull`, and it does not
+require you to understand Git.
+
+### Updating an older copy that does not have Prism
+
+Do this once. Do not merge a fresh download into your real project by hand.
+
+1. Keep your old project folder exactly where it is.
+2. Download the newest repo ZIP from GitHub and extract it somewhere else, such as
+   Downloads. This temporary copy is only a helper.
+3. Open Prism from the temporary copy.
+4. Click **Choose folder** and choose your **old project folder**—the one with your real
+   decks and progress.
+5. Open **Update**, click **Check for updates**, then **Install update**.
+6. Close the helper and use Prism inside your old project from now on. You may delete the
+   temporary downloaded copy.
+
+Prism treats the old folder as a legacy install: it backs up every toolkit file it will
+replace, preserves runtime state and study files, then tests the installed update.
+
+---
+
+## PART 2 — ONE-TIME SETUP
+
+### 1. Put this folder on your computer
 
 Clone or download the repo. Your Desktop or Documents folder is fine.
 
-- Q: How do I download this "repo", and what is a "repo"?
-- A: A repository, or "repo," is a project on GitHub. If you are reading this on GitHub,
-  click the green **Code** button, click **Download ZIP**, and extract the ZIP file. Move
-  the extracted folder to a place you can find again.
+- Q: How do I download this “repo,” and what is a repo?
+- A: A repository, or repo, is a project on GitHub. Click the green **Code** button,
+  choose **Download ZIP**, extract it, and move the extracted folder somewhere you can
+  find again.
 
-**One rule: the folder must be available on your actual hard drive, not cloud-only.** The
-pipeline uses SQLite. Cloud-only folders may cause a `disk I/O error` or may look empty.
+**The folder must be available on your actual hard drive, not cloud-only.** The pipeline
+uses SQLite. A cloud-only folder can cause a `disk I/O error` or appear empty.
 
-If you *do* want to keep it in Google Drive so it syncs across machines, that works, but
-you must mark the folder **Available offline** first:
+If you keep it in Google Drive, mark it **Available offline** first:
 
 - Install Google Drive for desktop: <https://support.google.com/a/users/answer/13022292>
-- Find the folder in Finder / File Explorer, right-click it, choose **Available offline**
-- Drive sync glitches often. If your agent says a folder is empty when you can see files in
-  it, pause and un-pause sync from the Drive menu bar icon. If that does not fix it, quit
-  the Drive app completely and reopen it. That usually restarts the sync.
+- Right-click the project in Finder or File Explorer and choose **Available offline**.
+- If a visible folder reads as empty, pause and resume Drive sync. If needed, quit Drive
+  completely and reopen it.
 
-An unsynced folder reads as **empty**, not as an error — which looks exactly like "there is
-no work to do". The scripts warn you about this, but know it going in.
+An unhydrated folder reads as **empty**, not as an error. That can look exactly like
+“there is no work to do,” so stop and fix sync before continuing.
 
-### 2. Run the installer
+### 2. Run the guided installer
 
-Open the **Update** page in the Control Center and click **Open guided setup**. Follow the
-words in the terminal window. That is the easiest method.
+Open **Update** in Prism and click **Open guided setup**. Follow the words in the terminal.
+The installer finds Python, Poppler, Tesseract, and Node, installs only what is missing,
+then runs the checks.
 
-If the Control Center cannot open yet, use the manual steps below.
+If Prism cannot open yet, open a terminal in the project folder and run the command for
+your operating system.
 
-First, you need to open a terminal inside the project folder.
+macOS or Linux:
 
-How to open the terminal to your folder:
-
-- macOS: Open the Terminal app. Type `cd ` with one space after it. Drag the project
-  folder from Finder into the Terminal window, then press Enter.
-
-- Windows: Open the project folder in File Explorer, click the address bar at the very
-  top, type `powershell`, and press Enter.
-
-- Linux: Right-click anywhere inside the project folder and select Open in Terminal.
-
-Once your terminal is in the right place, copy and paste the command for your operating system to start the installation:
-
-macOS or Linux
-(Bash)
-```
+```bash
 bash control_center/install/setup.sh
 ```
 
-Windows
-(PowerShell)
-```
+Windows PowerShell:
+
+```powershell
 .\control_center\install\setup.ps1
 ```
 
-That's it! The installer will figure out what you are missing—Python, Poppler, Tesseract, Node—and install only those. If you already have everything, it skips straight through. It is safe to run this script again at any time.
+Useful details:
 
-A few things worth knowing:
+- It may ask for your password before installing system software. It prints commands and
+  never elevates silently.
+- Preview without changing anything: use `bash control_center/install/setup.sh --dry-run`
+  on macOS/Linux or `.\control_center\install\setup.ps1 -DryRun` on Windows.
+- macOS uses Homebrew; Windows uses `winget`.
+- If PowerShell refuses the script, run
+  `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
+- If a newly installed tool still looks missing, close the terminal, open a new one, and
+  run setup again so the new shell sees the updated PATH.
+- The commands below use `python3`. On Windows, use `py` if `python3` is unavailable.
 
-- **It may ask for your password.** Installing system software may require it. The script
-  prints every command before it runs, and never runs anything as administrator silently.
-- **Want to see what it would do first?** On macOS or Linux, run
-  `bash control_center/install/setup.sh --dry-run`. On Windows, run
-  `.\control_center\install\setup.ps1 -DryRun`. These commands print
-  the planned steps and change nothing.
-- **macOS:** if you do not have Homebrew, the installer offers to install it. The setup
-  script uses Homebrew to install the missing tools.
-- **Windows:** it uses `winget`, which ships with Windows 11 and recent Windows 10. If
-  PowerShell refuses to run the script, run this once:
-  `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
-  Honestly, if you have WSL, installing WSL and using the bash installer inside it is the
-  smoother path for this pipeline.
-- **If it installs things and the next step still says they are missing:** close the
-  terminal, open a new one, and run it again. A terminal that was already open does not
-  see newly installed programs.
-- **Run it with `bash`, as shown above.** macOS ships an ancient bash (3.2, from
-  2007), so the script is written to POSIX rules to stay compatible with it. Invoking it
-  explicitly avoids any question of which shell picks it up.
+### 3. Confirm READY
 
-When it finishes installing it automatically runs the checks and self-tests, and prints
-what to do next.
+Setup ends by running `scripts/bootstrap.py`, which checks the environment and runs more
+than 140 self-tests. **It must end with `READY`.** If it says `NOT READY`, fix the item it
+names and run setup again. Re-run the checks alone any time with:
 
-The commands below use `python3`. On Windows, use `py` instead if `python3` is not found.
-
-### 3. Confirm it says READY
-
-The installer ends by running `scripts/bootstrap.py`, which checks everything and runs
-more than 140 self-tests.
-
-**It must end with `READY`.** If it says `NOT READY`, it prints exactly what is missing —
-fix that and run the installer again. Do not skip ahead. Every problem it catches is one
-that would otherwise surface halfway through a real deck.
-
-You can re-run the checks alone at any time, without the installer:
-
-```
+```bash
 python3 scripts/bootstrap.py
 ```
 
 ### 4. Set your preferences
 
-Open **Prefs** in the Control Center. The left box is your profile: how aggressively to fix errors without asking,
-whether you are keeping your Anki review history, how thorough to be. The defaults are
-sensible; read them once so you know what you agreed to.
+Open **Prefs** in Prism. The left editor is your profile: how aggressively to fix errors,
+whether to preserve Anki review history, and how thorough the work should be. The right
+editor is for your own prompt add-ons. Put universal preferences under **Every run**, or
+add notes for Build, Verify, Auto, or the final duplicate check. Click **Save preferences**.
 
-The right box is for your own prompt add-ons. Put general preferences under **Every
-run**, or add a note for only Build, Verify, Auto, or the final duplicate check. Click
-**Save preferences**. Updates keep both boxes.
+**Decide now whether to keep review history.** The default discards it. This changes how
+a rebuilt deck must be imported and is far cheaper to settle before the first build.
 
-**The one to decide now:** the default **discards your review history**. If you want to
-keep it, change that line before you build anything. It changes how a rebuilt deck must be
-imported, and it is far cheaper to decide now than later.
+### 5. Connect your desktop agent
 
-### 5. Point your agent at the folder
+#### Claude Cowork
 
-#### Use Claude Cowork
+Connect this project folder as the working folder.
 
-In Cowork, connect the project folder as your working folder.
+#### ChatGPT Codex
 
-#### Use ChatGPT Codex
-
-1. Install the [ChatGPT desktop app](https://learn.chatgpt.com/docs/quickstart) for Windows
-   or macOS, then sign in.
-2. Choose **Codex** in the app.
-3. Open this project folder.
-4. If the app asks **Local** or **Worktree**, choose **Local**. Your decks, source files,
-   results, and progress must stay in this folder.
-5. Start with **Ask for approval** in the permission menu below the message box. Codex can
-   edit this folder, but it may ask before using the internet. Approve web access when it
+1. Install the [ChatGPT desktop app](https://learn.chatgpt.com/docs/quickstart), then sign in.
+2. Choose **Codex** and open this project folder.
+3. If asked **Local** or **Worktree**, choose **Local**. Decks, source files, results, and
+   progress must remain together here.
+4. Start with **Ask for approval** in the permission menu. Approve web access when Codex
    checks medical facts. Do not use **Full access**.
 
 For the best clinical review, choose **5.6 Sol** with **High** reasoning if your account
-shows those choices. If it does not, use the strongest Codex model available to you.
-
-Official OpenAI help: [Quickstart](https://learn.chatgpt.com/docs/quickstart) and
+offers it; otherwise use the strongest Codex model available. Official help:
+[Quickstart](https://learn.chatgpt.com/docs/quickstart) and
 [Permissions](https://learn.chatgpt.com/docs/permission-modes).
 
 ---
 
-## PART 2 — STAGE A MODULE
+## PART 3 — STAGE YOUR MODULES
 
-Two folders, two things to drop in. Names must match.
+Two destinations, one shared module name.
 
-**Easy way:** open **Home** in the Control Center, type the module name, then drag your
-source files and `.apkg` deck into the two large boxes. The deck is renamed to match the
-module for you. Prism asks before replacing a file with the same name.
+**Easy way:** open **Home** in Prism, type the module name, then drop source files and an
+`.apkg` deck into the two large boxes. Prism renames the deck to match and asks before
+replacing a staged file. You may stage as many modules as you like.
 
-You can also place the files into the folders by hand:
+You may also use either input by itself:
 
-- You are also allowed to just drop in an Anki deck to optimize.
-- Or, just a source folder with files to create a brand new Anki deck.
+- Deck only → optimize the existing deck without source gap-fill.
+- Source only → create a new deck from scratch.
 
-### Source captures → `Source Files/<module name>/`
+### Source captures → `Source Files/<module>/`
 
-**Note:** Text files are cheap. PDFs without text layers and images are VERY expensive.
-    Utilize as many Text Files as you can to conserve token usage.
-    30+ pages of screenshots without a text layer will be 50-100% of your
-    LLM usage limits alone.
-
-**Supported source file types:**
+Text files are cheap. Image-only PDFs and screenshots are expensive: 30+ pages can use a
+large share of an LLM limit. Prefer text exports whenever they preserve the content.
 
 | Type | What happens | Notes |
 |---|---|---|
-| `.pdf` | Full pipeline: text layer or OCR + coverage gate | Best for page captures (GoFullPage, etc.) |
-| `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.tif`, `.tiff`, `.webp` | Wrapped as PDF, then same pipeline as above | Drop screenshots directly — no conversion needed |
-| `.txt`, `.md`, `.csv`, `.rtf` | Read directly as text — cheapest option | Great for transcripts, notes, outlines |
+| `.pdf` | Text extraction or OCR plus a coverage gate | Best for page captures |
+| `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.tif`, `.tiff`, `.webp` | Wrapped as PDF, then processed | Screenshots can be dropped directly |
+| `.txt`, `.md`, `.csv`, `.rtf` | Read directly as text | Cheapest for transcripts and notes |
 
-**PowerPoint and Word files are not direct inputs.** Export `.ppt`, `.pptx`, `.doc`, or
-`.docx` files to PDF first (**File → Save As → PDF** or **File → Export → PDF**). Drop the
-PDF into the source folder.
+Export PowerPoint and Word files to PDF first. Do not use an online converter: it can
+degrade quality and uploads course material to a third party. For web captures, keep
+individual PDFs rather than merging them with an online service that may destroy the text
+layer.
 
-Do **not** use an online converter — it degrades quality and uploads your course
-material to a third party.
-
-If you are using web page screenshots, capture them as individual PDFs
-(GoFullPage or similar). Capture every page. Do **not** merge the PDFs with an
-online tool — it destroys the text layer.
-
-One **folder per module**, named however you want the module named everywhere else.
-
-```
+```text
 Source Files/
-  Airway Anatomy and Management/
+  <module>/
     lecture-slides.pdf
-    screencapture-...-18_34_13.png
     notes.txt
     extra-diagrams.jpg
 ```
 
-### Deck → `Anki Decks/<module name>.apkg`
+### Anki deck → `Anki Decks/<module>.apkg`
 
-Export from Anki as `.apkg`. The filename must match the folder name above.
+Export the deck from Anki as `.apkg`. Its filename must match the source folder.
 
-```
+```text
 Anki Decks/
-  Airway Anatomy and Management.apkg
+  <module>.apkg
 ```
-
-- Deck but no source folder → runs in **optimize-only** mode. Full editorial rubric, no
-  gap-fill. That is supported, not an error.
-- Source folder but no deck → **creation mode**, building a deck from scratch. Read
-  `HANDOFF_REFERENCE.md` §1e first.
-
-Stage **as many modules as you would like** before starting! 
 
 ---
 
-## PART 3 — AUTO MODE (recommended)
+## PART 4 — RUN THE PIPELINE
 
-Set it running and read the results later. First, run this once in a normal chat:
+Choose one path. **Automatic mode is recommended**; manual mode is there when scheduling
+is unavailable or when you want to drive every phase yourself.
 
-```text
-Read scripts/PROMPT_auto.md and execute it.
-```
+### Path A — automatic mode
 
-Fix any setup error it reports before you create a schedule.
-
-### Schedule Claude Cowork
-
-In a fresh Cowork chat, ask for a task that runs in this project folder once per hour for
-the next 8 hours. Use this exact task prompt:
+First, run one normal chat to catch setup problems:
 
 ```text
 Read scripts/PROMPT_auto.md and execute it.
 ```
 
-### Schedule ChatGPT Codex
+Fix any setup error before scheduling repeated runs.
 
-1. Open **Settings → General → Permissions**. Turn on **Auto-review**.
-2. Return to this Codex project. Choose **Approve for me** below the message box.
-3. Stay in **Local**. Do not choose **Worktree** or **Cloud**.
-4. In a fresh Codex chat, paste this:
+#### Schedule Claude Cowork
+
+In a fresh Cowork chat, create a task that runs in this project once per hour for the next
+8 hours. Use this exact task prompt:
+
+```text
+Read scripts/PROMPT_auto.md and execute it.
+```
+
+#### Schedule ChatGPT Codex
+
+1. Open **Settings → General → Permissions** and turn on **Auto-review**.
+2. Return to this Local Codex project and choose **Approve for me**.
+3. In a fresh Codex task, paste:
 
 ```text
 Create a standalone scheduled task named "Auto Anki Optimize."
@@ -296,153 +264,94 @@ Use this exact prompt for every run:
 Read scripts/PROMPT_auto.md and execute it.
 ```
 
-Open **Scheduled** in the left sidebar to check the task or use **Run now**. Scheduled
-tasks use your normal permission settings. **Approve for me** starts with the same workspace
-boundary as **Ask for approval**, but OpenAI reviews eligible requests instead of waiting
-for you. Do not use **Full access**.
+Open **Scheduled** in the sidebar to inspect the task or use **Run now**. The computer
+must be awake and online and the desktop app must remain open. See
+[Scheduled tasks](https://learn.chatgpt.com/docs/automations). If Scheduled is not enabled
+for your account, use Path B.
 
-For any local scheduled task, your computer must be awake and online, and the desktop app
-must stay open. OpenAI explains this in [Scheduled tasks](https://learn.chatgpt.com/docs/automations).
+Stage everything you want processed and run the task. Each run performs one safe phase,
+then stops. A later run continues a resumable build or handles the next phase. Expect
+roughly **2–5 hours per deck**, including time between runs.
 
-If you do not see **Scheduled**, this feature may not be enabled for your account or
-workspace. Use **Part 4 — Manual Mode** instead.
+Two things never happen unattended:
 
-### Then
+1. `--pass` is never run. A completed review waits for your approval.
+2. Stale scripts or an empty-reading folder stop the run instead of guessing.
 
-Stage everything you want done, and hit **Run Now** on the task.
+### Path B — manual mode
 
-It does one phase per run, then stops. A phase may build, verify, or patch one module. The
-next hourly run continues where the last run stopped. If a run hits a usage limit, a later
-run tries again. Expect roughly **2–5 hours per deck** including the time between runs.
+Use two different sessions per module. A builder must not audit its own work.
 
-**Two things never happen unattended**, by design:
+#### Session A — build
 
-1. **`--pass` is never run.** Modules finish at `built-unverified` with their report
-   written, and you decide after reading it. That is the one human checkpoint and
-   automation does not get to remove it.
-2. **A stale script or an empty-reading folder stops the run** instead of working around
-   it. Those are the two failure modes that look like success from the outside.
-
-### In the morning
-
-Open **Decks** in the Control Center. Choose **Needs review**, click a deck, then use
-**Open notes** or **Open verification report**. Read the **JUDGEMENT CALLS**. That is where
-content decisions landed. It is the last real check against losing information.
-
-Happy with it? Paste this below, in a new session, just remember to **change the name of the module to yours!**
-
-
-```
-Approved. Pass it. Run: python3 scripts/verify_deck.py --pass "Airway Anatomy and Management"
-```
-
-One line per module. Not happy? See **Part 5**.
-
----
-
-## KEEP THE TOOLKIT UPDATED
-
-Open **Update** in the Control Center and click **Check for updates**. If a stable update
-is ready, click **Install update**.
-
-The patcher follows these rules:
-
-- It replaces only toolkit files listed by the publisher.
-- It never replaces your decks, source files, audit JSON, finished work, profile, prompt
-  add-ons, or verified status.
-- It tests the download before changing live files.
-- It makes a dated backup in `.pipeline_backups`.
-- If a final check fails, it puts the old toolkit and state back automatically.
-- If it finds an unfinished resumable build, it stops and asks you to finish that build
-  first.
-
-The update button uses the latest stable GitHub **Release**. It does not run `git pull`,
-and it does not need you to understand Git.
-
-### If your older copy does not have the Control Center yet
-
-Do this once. Do not copy new files over your old folder by hand.
-
-1. Keep your old project folder exactly where it is.
-2. Download the newest repo ZIP from GitHub and extract it to a different folder, such as
-   Downloads. This temporary copy is only the helper.
-3. Open the Control Center from the temporary copy.
-4. Click **Choose folder** at the top. Choose your **old project folder**—the one with your
-   real decks and progress.
-5. Open **Update**, click **Check for updates**, then click **Install update**.
-6. Close the helper. Open the Control Center inside your old project from now on. You may
-   delete the temporary downloaded copy.
-
-Prism treats the old folder as a legacy install. It backs up every existing toolkit file
-the new release will replace, preserves the old state and study files, then tests and
-installs the update. If a check fails, it restores the old folder automatically.
-
----
-
-## PART 4 — MANUAL MODE
-
-Same work, you drive. **Two sessions per module — they must be different sessions.**
-
-### Session A — build
-
-```
+```text
 Read scripts/PROMPT_build.md and execute it.
 ```
 
-Picks the next queued module, builds it, writes the audit trail, stops at one module.
+This picks the next queued module, builds it, writes the audit trail, and stops.
 
-### Session B — verify (must be a NEW session)
+#### Session B — verify
 
-A builder auditing its own work shares its own blind spots. Type the module name exactly.
+Start a **new session** and use:
 
-```
-Read scripts/PROMPT_verify.md and execute it for Airway Anatomy and Management.
-```
-
-It audits the deck adversarially, patches what is wrong, re-verifies its own patch,
-rebuilds the NOTES doc, and writes its report. Then it stops and shows you the judgement
-calls.
-
-Read them. If you agree:
-
-```
-Approved. Pass it.
+```text
+Read scripts/PROMPT_verify.md and execute it for <module>.
 ```
 
-Then it will offer to delete the scratch files and archive your originals. If you are
-completely done with that deck:
+It audits adversarially, patches defects, re-verifies the patch, rebuilds the NOTES doc,
+writes a report, and stops at the human decision.
 
+---
+
+## PART 5 — REVIEW, DECIDE, AND CLOSE THE LOOP
+
+Open **Decks** in Prism and choose **Needs review**. Select a deck, open its NOTES or
+verification report, and read every **JUDGEMENT CALL**. This is the deliberate human gate
+against losing important information.
+
+The selected deck has a decision workspace directly beneath its judgement calls. Prism
+inserts the exact deck name in every prompt—no manual renaming.
+
+### If you agree
+
+Copy the approval prompt from the deck's review workspace:
+
+```text
+Approved. Pass it. Run: python3 scripts/verify_deck.py --pass "<module>"
 ```
+
+This marks the module verified, updates the handoff state, and reclaims its completed
+scratch. If an older session still offers a separate cleanup step after everything is
+safely in `COMPLETED/<module>/`, approve it with:
+
+```text
 Approved. Cleanup.
 ```
 
-That is it. Two sessions and one command per module.
+### If you disagree
+
+Do not pass. In the same deck workspace, type exactly what should change. Prism appends
+the patch instruction and module name, previews the finished prompt, and copies it as one
+message:
+
+```text
+[Describe what should change.] Apply that correction to "<module>". Now read scripts/PROMPT_patch.md and execute it for "<module>".
+```
+
+The patch session rewrites, re-verifies, and returns to the human gate. Repeat until you
+are satisfied, then use the approval prompt.
 
 ---
 
-## PART 5 — IF YOU DISAGREE WITH A JUDGEMENT CALL
+## PART 6 — RUN AN OPTIONAL DEEP QUALITY CHECK
 
-Do not pass. Say exactly what is wrong, then point it at the patch prompt:
+This is highly recommended when clinical accuracy matters. In a fresh session, choose the
+prompt that matches how the deck started. Prism fills every `<module>` using the deck
+selector above its prompt library.
 
-```
-[Say exactly what you disagree with in the judgement calls.] Now read scripts/PROMPT_patch.md and execute it.
-```
+### Compare an original deck with the rebuild
 
-```
-Example: `"Card 12 is factually incorrect, the tidal volume should be 500ml, not 50ml. Now read scripts/PROMPT_patch.md and execute it."
-```
-
-It rewrites, re-verifies, and comes back to you. Repeat until you are happy, then pass.
-
----
-
-## PART 6 — GRADING A DECK YOURSELF (optional but HIGHLY recommended)
-
-If you want a hard look at whether a finished deck is actually better than what you
-started with, OR if you just want to grade a newly-made deck, paste ONE of these into a fresh session (**just replace the module name with your deck name**):
-
-**Compare Original Deck to Final Deck**
-```
+```text
 Compare COMPLETED/<module>/<module> (FINAL).apkg against the original in Anki Decks/ (or
 its archived copy). Be objective, be subjective, and be extremely critical of clinical
 accuracy in both.
@@ -457,58 +366,52 @@ anything the rebuild lost that the original had. I need this to be a gold-standa
 End with a copy-pasteable list of specific fixes.
 ```
 
-**Just Grade your NEW Anki Deck**
-```
+### Grade a deck created from source only
+
+```text
 Grade COMPLETED/<module>/<module> (FINAL).apkg against the source material in
 Source Files/<module>/. There is no prior deck — this was built from scratch.
 
-Read COMPLETED/EXAMPLE/README.md first so you know what the audit trail contains,
-then work from COMPLETED/<module>/audit/ — ops.json for what was created,
-changelog.json for why, meta.json for what was left outstanding.
+Read COMPLETED/EXAMPLE/README.md first so you know what the audit trail contains, then
+work from COMPLETED/<module>/audit/ — ops.json for what was created, changelog.json for
+why, meta.json for what was left outstanding.
 
-Report: total cards created; the multi-cloze rate; every factual claim you can
-check against the source material and whether it holds; any source content that
-was missed entirely. I need this to be a gold-standard deck.
-End with a copy-pasteable list of specific fixes.
+Report: total cards created; the multi-cloze rate; every factual claim you can check
+against the source material and whether it holds; and any source content missed entirely.
+I need this to be a gold-standard deck. End with a copy-pasteable list of specific fixes.
 ```
 
-Then feed its own list back to it:
+Feed the critique back into a fresh session:
 
-```
-Fix the final deck with those suggestions and give me the updated .apkg to import. Fix:
+```text
+Fix the final deck for <module> with these suggestions and give me the updated .apkg to import. Fix:
 
-[paste the fix list here]
+[Paste the fix list here]
 ```
 
 ---
 
-## PART 7 — AFTER EVERY MODULE IS DONE
+## PART 7 — FINISH THE COLLECTION
 
-Run this **once**, at the very end, after everything is built, verified and passed:
+After every module is built, verified, and passed, run this **once**:
 
-```
+```text
 Read scripts/PROMPT_dedupe.md and execute it.
 ```
 
-Duplicates between decks cannot be found one module at a time — that is exactly why this
-is a separate, final step.
+Cross-deck duplicates cannot be found one module at a time. This intentionally stays a
+separate final step.
 
 ---
 
-## WHAT THE PIPELINE IS DOING, IN FOUR SENTENCES
+## WHAT THE PIPELINE IS DOING
 
-You do not need this to use it, but it helps to know what you are trusting.
-
-Your captures are images, so the text is pulled out by OCR. Rather than making the model
-*look* at all 30–70 page pictures — which is the most expensive thing it can do and gives a
-worse transcription than the OCR already has — it reads the OCR text and looks only at the
-regions OCR could not handle: figures, low-confidence words, and every line with a number
-in it. That is safe only because it is proved rather than guessed: the extractor asserts
-`unaccounted_ink_px == 0`, meaning every meaningful pixel on every page is either inside a
-high-confidence OCR word or on the visual read list, and any page it cannot prove is handed
-over whole. Then a fourteen-rule editorial rubric is applied to every single card, every
-checkable number is looked up against an outside source, and the deck is checked against
-itself so it cannot ship two cards that contradict each other.
+Your captures may be images, so Prism extracts text with OCR. It reads pixels only where
+OCR is unreliable: figures, low-confidence words, and every line containing a number.
+The coverage gate proves every meaningful pixel is either inside a high-confidence word
+or on the visual-read list; an unprovable page is handed over whole. A fourteen-rule
+editorial rubric is applied to every card, checkable claims are verified independently,
+and the finished deck is checked against itself for contradictions.
 
 ---
 
@@ -517,18 +420,18 @@ itself so it cannot ship two cards that contradict each other.
 | Symptom | What it actually is |
 |---|---|
 | `disk I/O error` | The folder is on a cloud mount. Move it to local disk. |
-| A folder "is empty" but you can see files | Cloud sync has not materialized them. Quit and reopen the Drive app. |
-| Your agent reports a bug that sounds already-fixed | Stale script copy. Run `python3 scripts/check_version.py` before believing any bug report. |
-| Counts do not reconcile at build time | Something edited the deck outside `ops.json`. The build is supposed to fail here — do not force it. |
-| `unaccounted_ink_px` is not 0 | The coverage proof failed. Re-run extraction with `COVERAGE=page` and it reads whole pages instead. |
-| A tool is "missing" right after installing it | Your terminal was open before the install. Close it, open a new one, re-run. |
-| PowerShell will not run the installer | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, once. |
-| Mac says Apple could not verify the launcher | Click **Done**, then use **System Settings → Privacy & Security → Open Anyway**. |
+| A visible folder reads as empty | Cloud sync has not materialized it. Restart the Drive app. |
+| An agent reports a familiar already-fixed bug | Run `python3 scripts/check_version.py` before diagnosing stale scripts. |
+| Counts do not reconcile | Something edited the deck outside `ops.json`; the build is correctly refusing it. |
+| `unaccounted_ink_px` is not 0 | Re-run extraction with `COVERAGE=page` so it reads whole pages. |
+| A tool is missing right after setup | Open a new terminal and re-run setup. |
+| PowerShell blocks the installer | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once. |
+| macOS blocks the launcher | Click **Done**, then **Privacy & Security → Open Anyway**. |
 | Anything else | Open Prism and click **Open guided setup** again. |
 
-**Read these, in this order, if you want more:**
+**Read more in this order:**
 
-1. `COMPLETED/EXAMPLE/README.md` — what a finished module looks like
-2. `scripts/HANDOFF.md` — the actual job. §3b is the editorial rubric.
-3. `scripts/HANDOFF_REFERENCE.md` — **do not read whole.** Pull one section:
-   `python3 scripts/handoff.py 4b`
+1. `COMPLETED/EXAMPLE/README.md` — what a finished module looks like.
+2. `scripts/HANDOFF.md` — the actual job; §3b is the editorial rubric.
+3. `scripts/HANDOFF_REFERENCE.md` — pull one section on demand, for example
+   `python3 scripts/handoff.py 4b`. Do not read the entire reference by default.
