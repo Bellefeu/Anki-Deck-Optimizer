@@ -38,6 +38,12 @@
 
   --radius: 26px;
 
+  /* One measure for everything the user reads or operates. The old layout
+     ran headings at 62% and the sections under them at 100%, which gave
+     the page three competing column systems and no settled right edge.
+     Anything past this measure belongs to the field. */
+  --measure: min(1220px, 100%);
+
   --ease: cubic-bezier(0.22, 0.61, 0.28, 1);
 
   font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Roboto, sans-serif;
@@ -241,10 +247,10 @@ button, input, textarea, select { font: inherit; color: inherit; }
 main {
   min-width: 0;
   width: 100%;
-  max-width: 1640px;
-  margin: 0 auto;
   padding: 26px clamp(22px, 4.2vw, 74px) 96px;
 }
+
+.view, .topbar { max-width: var(--measure); }
 
 /* ------------------------------------------------------------------ *
  * Panels. No closed strokes anywhere in here.
@@ -514,7 +520,6 @@ button:disabled { opacity: 0.34; cursor: not-allowed; }
 /* The opening block is the one place the field is allowed to dominate,
    so it gets height and almost nothing else. */
 .opening {
-  max-width: 62%;
   min-height: clamp(220px, 34vh, 380px);
   padding-bottom: clamp(24px, 4vh, 52px);
   display: flex;
@@ -542,7 +547,6 @@ button:disabled { opacity: 0.34; cursor: not-allowed; }
   gap: 26px;
   margin-bottom: clamp(24px, 4vh, 44px);
   min-height: clamp(190px, 28vh, 300px);
-  max-width: 62%;
 }
 .page-heading h1 { font-size: clamp(34px, 4.2vw, 58px); margin-bottom: 12px; }
 .page-heading p { margin: 0; max-width: 54ch; }
@@ -604,13 +608,28 @@ button:disabled { opacity: 0.34; cursor: not-allowed; }
 }
 .section-title h2 { margin: 6px 0 0; }
 
+/* Naming the module is a precondition for both drop zones: staging fails
+   without it. It used to sit opposite the section heading, as far from the
+   thing it gates as the layout allowed. Now it reads as the first step. */
 .module-field {
-  width: min(390px, 48%);
+  display: block;
+  width: min(520px, 100%);
+  margin-bottom: 26px;
+}
+.module-field-label {
+  display: block;
   color: var(--ink-faint);
   font-size: 9.5px;
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+.module-field small {
+  display: block;
+  margin-top: 9px;
+  color: var(--ink-ghost);
+  font-size: 11px;
+  letter-spacing: 0.01em;
 }
 .module-field input {
   width: 100%;
@@ -749,16 +768,28 @@ button:disabled { opacity: 0.34; cursor: not-allowed; }
 .upload-item.done small { color: var(--mint); }
 .upload-item.failed small { color: var(--rose); }
 
-.home-lower { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 4vw, 64px); }
-.setup-mini, .next-review {
-  min-height: 210px;
+/* Home reads top to bottom in one order now: who you are, where things
+   stand, what is waiting on you, what to add, and how the machine is.
+   Health and the checkpoint used to sit side by side, paired only because
+   they were both left over, which is what made the page feel like a set
+   of tiles rather than a sequence. */
+.next-review { display: flex; flex-direction: column; align-items: flex-start; }
+.next-review h2 { margin: 14px 0 0; font-size: clamp(22px, 2.4vw, 30px); font-weight: 300; letter-spacing: -0.028em; }
+.next-review p { margin: 10px 0 0; max-width: 54ch; }
+.next-review .quiet-button { margin-top: 22px; }
+
+/* Ambient status, so it reads as a strip along the foot of the page
+   rather than a task competing with the ones above it. */
+.setup-mini {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px 28px;
 }
-.setup-mini h2, .next-review h2 { margin: 14px 0 0; }
-.next-review p { margin-top: 8px; }
-.setup-mini .primary-button, .next-review .quiet-button { margin-top: auto; }
+.setup-mini-copy { flex: 0 1 auto; }
+.setup-mini h2 { margin: 8px 0 0; font-size: 20px; font-weight: 400; }
+.setup-mini .health-pills { flex: 1 1 260px; margin: 0; }
+.setup-mini .primary-button { flex: 0 0 auto; margin-left: auto; }
 
 .health-pills, .preserve-strip {
   display: flex;
@@ -1114,7 +1145,34 @@ button:disabled { opacity: 0.34; cursor: not-allowed; }
   text-transform: uppercase;
 }
 .prompt-card h3 { position: relative; z-index: 1; margin: 20px 0 14px; font-size: 20px; font-weight: 400; letter-spacing: -0.022em; }
-.prompt-requirement { position: relative; z-index: 1; display: block; margin: -6px 0 12px; color: var(--amber-soft); font-size: 10px; line-height: 1.45; }
+/* Every prompt that cannot be copied yet says why, in place. A disabled
+   button with only a tooltip hides the reason from anyone who does not
+   happen to hover it. */
+.prompt-requirement {
+  position: relative;
+  z-index: 1;
+  display: block;
+  margin: -4px 0 14px;
+  padding-left: 15px;
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+.prompt-requirement::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.46em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.prompt-requirement[data-state="blocked"] { color: var(--amber-soft); }
+.prompt-requirement[data-state="blocked"]::before { box-shadow: 0 0 9px currentColor; }
+.prompt-requirement[data-state="ready"] { color: var(--ink-faint); }
+.prompt-requirement[data-state="ready"]::before { opacity: 0.5; }
+.guide-code-card .prompt-requirement { margin: 14px 0 0; }
+.decision-card .prompt-requirement { margin: 14px 0 12px; }
 .prompt-card pre {
   position: relative;
   z-index: 1;
@@ -1518,11 +1576,10 @@ button:disabled { opacity: 0.34; cursor: not-allowed; }
       rgba(0, 0, 0, 0.84) 72%,
       rgba(0, 0, 0, 0.95) 100%);
   }
-  .opening, .page-heading { max-width: none; }
   .metric-grid { grid-template-columns: 1fr 1fr; row-gap: 22px; }
   .metric:nth-child(3) { padding-left: 0; }
   .metric:nth-child(3)::before { display: none; }
-  .drop-grid, .home-lower, .maintenance-grid, .preference-grid, .deck-layout, .guide-layout { grid-template-columns: 1fr; }
+  .drop-grid, .maintenance-grid, .preference-grid, .deck-layout, .guide-layout { grid-template-columns: 1fr; }
   .preference-grid { height: auto; }
   .editor-card textarea { min-height: 440px; }
   .deck-list, .deck-detail { max-height: none; }

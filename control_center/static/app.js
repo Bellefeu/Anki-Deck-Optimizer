@@ -27,12 +27,18 @@ const pathMeasure = document.createElement("canvas").getContext("2d");
  * reads as luminous string art at a quarter of the viewport reads as a
  * grey wall at three quarters of it. Small and bright, with a lot of void
  * around it, is what the reference renders actually do. */
+/* recede is how strongly the body climbs out of the way as the page is
+   scrolled. Home earns the most: its lower half is bare text and numbers
+   sitting straight on the void, with no surface of their own to separate
+   them from whatever is lit behind. The guide and the deck screens put
+   their content on filled panels, so their bodies can stay where they
+   are and keep following the page down. */
 const FIELD_SCENES = {
-  home: {body: "ruled", x: 0.58, y: 0.38, scale: 0.22, point: 1.05, intensity: 1.25},
-  guide: {body: "weave", x: 0.50, y: 0.12, scale: 0.24, point: 1.00, intensity: 1.45},
-  decks: {body: "foam", x: 0.70, y: 0.40, scale: 0.19, point: 1.00, intensity: 1.05},
-  preferences: {body: "coil", x: 0.74, y: 0.24, scale: 0.17, point: 0.95, intensity: 0.85},
-  updates: {body: "aperture", x: 0.62, y: 0.32, scale: 0.23, point: 1.05, intensity: 1.20},
+  home: {body: "ruled", x: 0.58, y: 0.38, scale: 0.22, point: 1.05, intensity: 1.25, recede: 1.0},
+  guide: {body: "weave", x: 0.50, y: 0.12, scale: 0.24, point: 1.00, intensity: 1.45, recede: 0.45},
+  decks: {body: "foam", x: 0.70, y: 0.40, scale: 0.19, point: 1.00, intensity: 1.05, recede: 0.3},
+  preferences: {body: "coil", x: 0.74, y: 0.24, scale: 0.17, point: 0.95, intensity: 0.85, recede: 0.3},
+  updates: {body: "aperture", x: 0.62, y: 0.32, scale: 0.23, point: 1.05, intensity: 1.20, recede: 0.6},
 };
 
 const field = window.PrismField ? window.PrismField.mount($("#prism-field"), {samples: 220000}) : null;
@@ -59,6 +65,19 @@ function applyFieldScene(name) {
     : scene;
 
   field.setScene(scene.body, {...framed, warm});
+  syncFieldDrift();
+}
+
+/* Full recession by the time roughly one screen has gone past, which is
+   about where every view stops being a heading and starts being work. A
+   view too short to scroll that far still reaches full recession at its
+   own bottom, otherwise the body would sit half in the way and stay
+   there with nowhere left to scroll. */
+function syncFieldDrift() {
+  if (!field) return;
+  const reach = document.documentElement.scrollHeight - window.innerHeight;
+  const span = Math.max(1, Math.min(reach, window.innerHeight * 1.05));
+  field.setDrift(window.scrollY / span);
 }
 
 async function api(path, options = {}) {
@@ -133,23 +152,78 @@ function contextualizeGuidePrompt(template) {
     .replaceAll("[Describe what should change.]", feedback);
 }
 
+/* A prompt can be waiting on a deck, on a written correction, or on
+   nothing at all. Whatever the answer, the card says it out loud: a
+   disabled button with only a tooltip leaves the reason invisible to
+   anyone who does not happen to hover it. */
+function promptRequirement(template, options = {}) {
+  const needsDeck = Boolean(options.requiresDeck ?? promptNeedsDeck(template));
+  const needsNote = Boolean(options.requiresFeedback ?? promptNeedsPatchNote(template));
+  if (!needsDeck && !needsNote) return null;
+
+  if (needsDeck && !activeModuleName()) {
+    return {
+      blocked: true,
+      text: state.decks.length
+        ? "Pick a module under Active review deck above, and this prompt fills in with its name."
+        : "No finished deck exists yet. Build one first, then this prompt fills in with its name.",
+    };
+  }
+  if (needsNote && !activePatchNote()) {
+    return {
+      blocked: true,
+      /* The correction box is on the Decks screen. Telling someone who is
+         already standing in front of it to go and find it reads as a bug. */
+      text: currentViewName() === "decks"
+        ? "Write the correction in the box above, and this prompt picks it up."
+        : `Open Deck Review, write what should change about ${activeModuleName()}, and this prompt picks it up.`,
+    };
+  }
+  return {blocked: false, text: `Ready, and already written for ${activeModuleName()}.`};
+}
+
 function refreshCopyButton(button) {
-  const missingDeck = button._requiresDeck && !activeModuleName();
-  const missingFeedback = button._requiresFeedback && !activePatchNote();
-  button.disabled = Boolean(button._forceDisabled || missingDeck || missingFeedback);
-  if (missingDeck) button.title = "Choose a review deck first.";
-  else if (missingFeedback) button.title = "Describe the correction in Deck Review first.";
+  const requirement = promptRequirement(button._template, {
+    requiresDeck: button._requiresDeck,
+    requiresFeedback: button._requiresFeedback,
+  });
+  button.disabled = Boolean(button._forceDisabled || requirement?.blocked);
+  if (requirement?.blocked) button.title = requirement.text;
   else button.removeAttribute("title");
+}
+
+function requirementNote(template, options = {}) {
+  const requirement = promptRequirement(template, options);
+  if (!requirement) return null;
+  const note = document.createElement("small");
+  note.className = "prompt-requirement";
+  note.dataset.promptRequirement = template;
+  /* Carried on the node so the live refresh can rebuild the same
+     requirement later. Buttons whose prompt is assembled in code rather
+     than parsed from the guide have no tokens to infer it from. */
+  if (options.requiresDeck !== undefined) note.dataset.requiresDeck = options.requiresDeck ? "1" : "0";
+  if (options.requiresFeedback !== undefined) note.dataset.requiresFeedback = options.requiresFeedback ? "1" : "0";
+  note.dataset.state = requirement.blocked ? "blocked" : "ready";
+  note.textContent = requirement.text;
+  return note;
+}
+
+function noteOptions(node) {
+  const options = {};
+  if (node.dataset.requiresDeck !== undefined) options.requiresDeck = node.dataset.requiresDeck === "1";
+  if (node.dataset.requiresFeedback !== undefined) options.requiresFeedback = node.dataset.requiresFeedback === "1";
+  return options;
 }
 
 function updateContextualPrompts() {
   $$('[data-prompt-template]').forEach((node) => {
     node.textContent = contextualizeGuidePrompt(node.dataset.promptTemplate);
   });
-  $$('[data-patch-hint]').forEach((node) => {
-    node.textContent = activePatchNote()
-      ? "Uses the correction you wrote in Deck Review."
-      : "Write the correction in Deck Review to unlock this copy button.";
+  $$('[data-prompt-requirement]').forEach((node) => {
+    const requirement = promptRequirement(node.dataset.promptRequirement, noteOptions(node));
+    if (!requirement) return;
+    node.dataset.state = requirement.blocked ? "blocked" : "ready";
+    node.textContent = requirement.text;
   });
   $$(".guide-copy-button").forEach(refreshCopyButton);
   renderPromptDeckSelector();
@@ -247,6 +321,7 @@ function makeCopyButton(code, label = "Copy prompt", options = {}) {
   const getter = typeof code === "function" ? code : () => code;
   const template = options.template || (typeof code === "string" ? code : "");
   button._copyText = getter;
+  button._template = template;
   button._requiresDeck = Boolean(options.requiresDeck ?? promptNeedsDeck(template));
   button._requiresFeedback = Boolean(options.requiresFeedback ?? promptNeedsPatchNote(template));
   button._forceDisabled = Boolean(options.disabled);
@@ -291,15 +366,8 @@ function renderPromptLibrary(markdown) {
     pre.dataset.promptTemplate = prompt.code;
     pre.textContent = contextualizeGuidePrompt(prompt.code);
     card.append(top, heading);
-    if (promptNeedsPatchNote(prompt.code)) {
-      const hint = document.createElement("small");
-      hint.className = "prompt-requirement";
-      hint.dataset.patchHint = "true";
-      hint.textContent = activePatchNote()
-        ? "Uses the correction you wrote in Deck Review."
-        : "Write the correction in Deck Review to unlock this copy button.";
-      card.append(hint);
-    }
+    const note = requirementNote(prompt.code);
+    if (note) card.append(note);
     card.append(pre);
     grid.append(card);
   }
@@ -422,7 +490,12 @@ function renderGuide(markdown) {
       const pre = document.createElement("pre");
       if (promptMeta) pre.dataset.promptTemplate = code;
       pre.textContent = promptMeta ? contextualizeGuidePrompt(code) : code;
-      shell.append(top, pre);
+      shell.append(top);
+      /* The same prompts appear inline in the guide as in the library, so
+         they have to explain themselves in both places. */
+      const note = promptMeta ? requirementNote(code) : null;
+      if (note) shell.append(note);
+      shell.append(pre);
       chapter.append(shell);
       continue;
     }
@@ -781,13 +854,16 @@ function renderDeckDetail(deck) {
     {requiresDeck: false, requiresFeedback: true},
   );
   correctButton.classList.add("decision-copy");
+  const correctNote = requirementNote("", {requiresDeck: false, requiresFeedback: true});
   feedback.addEventListener("input", () => {
     state.patchNotes[deck.name] = feedback.value;
     correctPreview.textContent = patchPrompt(deck);
     updateContextualPrompts();
     refreshCopyButton(correctButton);
   });
-  correct.append(correctLabel, correctHeading, correctCopy, feedback, correctPreview, correctButton);
+  correct.append(correctLabel, correctHeading, correctCopy, feedback);
+  if (correctNote) correct.append(correctNote);
+  correct.append(correctPreview, correctButton);
 
   decisionGrid.append(approve, correct);
   detail.append(
@@ -1212,6 +1288,7 @@ function bindEvents() {
     window.clearTimeout(reframe);
     reframe = window.setTimeout(() => applyFieldScene(currentViewName()), 180);
   });
+  window.addEventListener("scroll", syncFieldDrift, {passive: true});
   $("#jump-prompts").addEventListener("click", () => {
     $("#prompt-library").scrollIntoView({behavior: "smooth", block: "start"});
   });

@@ -82,11 +82,21 @@
           <article class="metric"><strong id="metric-staged">·</strong><small>decks staged</small></article>
         </div>
 
+        <section class="band next-review">
+          <span class="eyebrow">NEXT HUMAN CHECKPOINT</span>
+          <div id="next-review-content"><h2>No deck loaded yet</h2><p>Your next judgement review will appear here.</p></div>
+          <button class="quiet-button" data-go="decks">Open deck review</button>
+        </section>
+
         <section class="band stage-card">
           <div class="section-title">
             <div><span class="eyebrow">QUICK STAGE</span><h2>Drop in your next module</h2></div>
-            <label class="module-field">Module name<input id="module-name" placeholder="Enter the name used in Anki"></label>
           </div>
+          <label class="module-field">
+            <span class="module-field-label">Module name</span>
+            <input id="module-name" placeholder="Enter the name used in Anki">
+            <small>Name it first. Everything dropped below is staged into this module.</small>
+          </label>
           <div class="drop-grid">
             <div class="drop-zone" id="source-drop" data-kind="source" tabindex="0" role="button">
               <div class="drop-icon" aria-hidden="true">
@@ -116,19 +126,14 @@
           <div id="upload-list" class="upload-list" aria-live="polite"></div>
         </section>
 
-        <div class="home-lower">
-          <section class="band setup-mini">
+        <section class="band setup-mini">
+          <div class="setup-mini-copy">
             <span class="eyebrow">TOOLKIT HEALTH</span>
             <h2 id="health-title">Checking this computer</h2>
-            <div class="health-pills" id="health-pills"></div>
-            <button id="run-setup-home" class="primary-button">Run guided setup</button>
-          </section>
-          <section class="band next-review">
-            <span class="eyebrow">NEXT HUMAN CHECKPOINT</span>
-            <div id="next-review-content"><h2>No deck loaded yet</h2><p>Your next judgement review will appear here.</p></div>
-            <button class="quiet-button" data-go="decks">Open deck review</button>
-          </section>
-        </div>
+          </div>
+          <div class="health-pills" id="health-pills"></div>
+          <button id="run-setup-home" class="primary-button">Run guided setup</button>
+        </section>
       </section>
 
       <section class="view" id="view-guide">
