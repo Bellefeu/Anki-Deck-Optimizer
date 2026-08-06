@@ -8,9 +8,10 @@ read this folder, run the scripts, and follow the prompt files. A normal web cha
 work directly in a folder on your computer.
 
 The easiest path is the **Prism Control Center**. It handles updates, setup, staging,
-preferences, deck review, and copy-ready prompts. Anything in a code-style box is meant
-to be copied exactly. Inside Prism, choose a review deck once and every `<module>` token
-is replaced with that deck's real name before you copy.
+preferences, deck review, and copy-ready prompts. When the text says to paste or run a
+code-style box, copy that box exactly; other boxes are folder-layout examples. Inside
+Prism, choose a review deck once and every `<module>` token is replaced with that deck's
+real name before you copy.
 
 ### Open Prism
 
@@ -35,6 +36,8 @@ The project root intentionally has only two launchers. Setup scripts and templat
 inside `control_center/`, so a new user never has to guess which technical file to run.
 Your browser opens a local page named **Prism**. Keep the small terminal window open while
 you use it. Prism runs only on your computer; it does not upload your decks to a website.
+If Python is missing, the launcher opens the guided installer first; open Prism again
+after setup finishes.
 
 ---
 
@@ -137,8 +140,9 @@ Useful details:
 ### 3. Confirm READY
 
 Setup ends by running `scripts/bootstrap.py`, which checks the environment and runs more
-than 140 self-tests. **It must end with `READY`.** If it says `NOT READY`, fix the item it
-names and run setup again. Re-run the checks alone any time with:
+than 140 self-tests. The final status must begin with **`READY`**; `READY, with warnings`
+is usable, but read each warning. If it says `NOT READY`, fix the item it names and run
+setup again. Re-run the checks alone any time with:
 
 ```bash
 python3 scripts/bootstrap.py
@@ -231,47 +235,68 @@ is unavailable or when you want to drive every phase yourself.
 
 ### Path A — automatic mode
 
-First, run one normal chat to catch setup problems:
+First, use one normal chat to test the automatic prompt:
 
 ```text
 Read scripts/PROMPT_auto.md and execute it.
 ```
 
-Fix any setup error before scheduling repeated runs.
+This is a real pipeline run, not a preview: it may complete the next build or verification
+phase. Fix any setup error it finds before scheduling repeated runs.
 
 #### Schedule Claude Cowork
 
-In a fresh Cowork chat, create a task that runs in this project once per hour for the next
-8 hours. Use this exact task prompt:
+In the Cowork project connected to this folder, open **Scheduled → New task → Create with
+Claude**, then paste this entire scheduler-creation prompt:
 
 ```text
+Create a scheduled Cowork task with these settings.
+
+Name: Auto Anki Optimize
+Description: Advance the Anki optimization pipeline by one safe, resumable phase per run.
+Instructions for every run:
 Read scripts/PROMPT_auto.md and execute it.
+
+Schedule: Run once per hour for the next 8 hours, then stop and do not run again.
+Working folder: This project folder. The task requires its local files.
+Approval mode: Automatically approve. Do not use Skip all approvals.
 ```
+
+Confirm that Claude shows the correct name, hourly schedule, instructions, and working
+folder, then click **Schedule**. Because this task uses local files, the computer must be
+awake and Claude Desktop must remain open for each run. See
+[Claude scheduled tasks](https://support.claude.com/en/articles/13854387-schedule-recurring-tasks-in-claude-cowork).
 
 #### Schedule ChatGPT Codex
 
 1. Open **Settings → General → Permissions** and turn on **Auto-review**.
 2. Return to this Local Codex project and choose **Approve for me**.
-3. In a fresh Codex task, paste:
+3. In a fresh Codex task in this project, paste this entire scheduler-creation prompt:
 
 ```text
-Create a standalone scheduled task named "Auto Anki Optimize."
+Create a standalone scheduled task with these settings.
 
-Run it in this Local project, not a worktree or cloud environment.
-Run once per hour for the next 8 hours, then stop.
-Use this exact prompt for every run:
-
+Name: Auto Anki Optimize
+Description: Advance the Anki optimization pipeline by one safe, resumable phase per run.
+Instructions for every run:
 Read scripts/PROMPT_auto.md and execute it.
+
+Schedule: Run once per hour for the next 8 hours, then stop and do not run again.
+Project: This Local project.
+Run mode: Local project. Do not use an isolated worktree or cloud environment.
+Permissions: Keep the workspace boundary and use Approve for me. Do not use Full access.
 ```
 
-Open **Scheduled** in the sidebar to inspect the task or use **Run now**. The computer
-must be awake and online and the desktop app must remain open. See
+Open **Scheduled** in the sidebar and confirm the name, instructions, eight-hour schedule,
+Local project, and run mode. Use **Run now** if you want the first scheduled phase to start
+immediately. The computer must be awake and online and the desktop app must remain open. See
 [Scheduled tasks](https://learn.chatgpt.com/docs/automations). If Scheduled is not enabled
 for your account, use Path B.
 
-Stage everything you want processed and run the task. Each run performs one safe phase,
-then stops. A later run continues a resumable build or handles the next phase. Expect
-roughly **2–5 hours per deck**, including time between runs.
+Each scheduled run starts a fresh session, performs one safe phase, and stops. A later run
+continues a resumable build or handles the next phase. Expect roughly **2–5 hours per
+deck**, including time between runs. Add another eight-hour schedule later if queued work
+remains.
 
 Two things never happen unattended:
 
@@ -303,7 +328,7 @@ writes a report, and stops at the human decision.
 
 ---
 
-## PART 5 — REVIEW, DECIDE, AND CLOSE THE LOOP
+## PART 5 — REVIEW AND CORRECT
 
 Open **Decks** in Prism and choose **Needs review**. Select a deck, open its NOTES or
 verification report, and read every **JUDGEMENT CALL**. This is the deliberate human gate
@@ -312,21 +337,20 @@ against losing important information.
 The selected deck has a decision workspace directly beneath its judgement calls. Prism
 inserts the exact deck name in every prompt—no manual renaming.
 
+If clinical accuracy matters and you plan to run the deeper check in Part 6, do that
+before final approval, then return here.
+
 ### If you agree
 
-Copy the approval prompt from the deck's review workspace:
+When this is your final review—including Part 6 if you are using it—copy the approval
+prompt from the deck's review workspace:
 
 ```text
 Approved. Pass it. Run: python3 scripts/verify_deck.py --pass "<module>"
 ```
 
-This marks the module verified, updates the handoff state, and reclaims its completed
-scratch. If an older session still offers a separate cleanup step after everything is
-safely in `COMPLETED/<module>/`, approve it with:
-
-```text
-Approved. Cleanup.
-```
+This marks the module verified, updates the handoff state, archives its original inputs,
+and reclaims its completed scratch.
 
 ### If you disagree
 
@@ -345,9 +369,9 @@ are satisfied, then use the approval prompt.
 
 ## PART 6 — RUN AN OPTIONAL DEEP QUALITY CHECK
 
-This is highly recommended when clinical accuracy matters. In a fresh session, choose the
-prompt that matches how the deck started. Prism fills every `<module>` using the deck
-selector above its prompt library.
+Do this **before final approval** whenever clinical accuracy matters. In a fresh session,
+choose the prompt that matches how the deck started. Prism fills every `<module>` using
+the deck selector above its prompt library.
 
 ### Compare an original deck with the rebuild
 
@@ -381,19 +405,24 @@ against the source material and whether it holds; and any source content missed 
 I need this to be a gold-standard deck. End with a copy-pasteable list of specific fixes.
 ```
 
-Feed the critique back into a fresh session:
+Feed the critique back through the audited patch workflow in a fresh session:
 
 ```text
-Fix the final deck for <module> with these suggestions and give me the updated .apkg to import. Fix:
+Treat the following as a correction report for "<module>". Confirm each finding, apply every
+valid correction, and keep the audit trail. Now read scripts/PROMPT_patch.md and execute it
+for "<module>".
 
 [Paste the fix list here]
 ```
+
+After the patch is independently re-verified, re-read its judgement calls and return to
+Part 5 for final approval.
 
 ---
 
 ## PART 7 — FINISH THE COLLECTION
 
-After every module is built, verified, and passed, run this **once**:
+After every module is built and passed, run this **once**:
 
 ```text
 Read scripts/PROMPT_dedupe.md and execute it.
@@ -427,7 +456,8 @@ and the finished deck is checked against itself for contradictions.
 | A tool is missing right after setup | Open a new terminal and re-run setup. |
 | PowerShell blocks the installer | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once. |
 | macOS blocks the launcher | Click **Done**, then **Privacy & Security → Open Anyway**. |
-| Anything else | Open Prism and click **Open guided setup** again. |
+| A dependency or readiness check fails | Open Prism and click **Open guided setup** again. |
+| Anything else | Copy the exact error into a fresh desktop-agent session in this project. Do not work around a safety stop. |
 
 **Read more in this order:**
 

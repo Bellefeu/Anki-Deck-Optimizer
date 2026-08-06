@@ -181,7 +181,8 @@ async function copyGuideText(text, button) {
 function guidePromptMeta(code) {
   const value = code.trim();
   const lower = value.toLowerCase();
-  if (lower.includes("create a standalone scheduled task")) return ["Scheduled run", "Automate eight hours"];
+  if (lower.includes("create a scheduled cowork task")) return ["Claude scheduler", "Automate eight hours in Cowork"];
+  if (lower.includes("create a standalone scheduled task")) return ["ChatGPT scheduler", "Automate eight hours in Codex"];
   if (lower.includes("prompt_auto.md")) return ["Automatic mode", "Run the next safe phase"];
   if (lower.includes("prompt_build.md")) return ["Session A", "Build a module"];
   if (lower.includes("prompt_verify.md")) return ["Session B", "Verify in a fresh session"];
@@ -189,9 +190,7 @@ function guidePromptMeta(code) {
   if (lower.includes("prompt_dedupe.md")) return ["Final step", "Check across every deck"];
   if (lower.startsWith("compare completed/")) return ["Grade a rebuild", "Compare original and final"];
   if (lower.startsWith("grade completed/")) return ["Grade a new deck", "Audit creation mode"];
-  if (lower.startsWith("fix the final deck")) return ["Apply the critique", "Repair the final deck"];
   if (lower.startsWith("approved. pass it")) return ["Human approval", "Pass the verified deck"];
-  if (lower.startsWith("approved. cleanup")) return ["Finish the module", "Archive scratch work"];
   return null;
 }
 
@@ -409,7 +408,8 @@ function renderGuide(markdown) {
           list.append(item);
           index += 1;
         } else if (item && lines[index].trim() && !isGuideBlockStart(lines, index)) {
-          item.append(document.createTextNode(` ${lines[index].trim()}`));
+          item.append(document.createTextNode(" "));
+          appendGuideInline(item, lines[index].trim());
           index += 1;
         } else {
           break;

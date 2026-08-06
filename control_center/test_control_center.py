@@ -151,6 +151,7 @@ class PackagingTests(unittest.TestCase):
         self.assertIn('function contextualizeGuidePrompt', script)
         self.assertIn('function patchPrompt', script)
         self.assertIn('className = "judgement-feedback"', script)
+        self.assertIn('appendGuideInline(item, lines[index].trim());', script)
 
     def test_guide_leads_with_updates_and_uses_contextual_module_tokens(self):
         guide = (ROOT / "START HERE.md").read_text(encoding="utf-8")
@@ -158,7 +159,7 @@ class PackagingTests(unittest.TestCase):
         setup = guide.index("## PART 2 — ONE-TIME SETUP")
         stage = guide.index("## PART 3 — STAGE YOUR MODULES")
         run = guide.index("## PART 4 — RUN THE PIPELINE")
-        review = guide.index("## PART 5 — REVIEW, DECIDE, AND CLOSE THE LOOP")
+        review = guide.index("## PART 5 — REVIEW AND CORRECT")
         self.assertLess(update, setup)
         self.assertLess(setup, stage)
         self.assertLess(stage, run)
@@ -166,6 +167,30 @@ class PackagingTests(unittest.TestCase):
         self.assertIn('verify_deck.py --pass "<module>"', guide)
         self.assertIn('PROMPT_patch.md and execute it for "<module>"', guide)
         self.assertNotIn('verify_deck.py --pass "Airway Anatomy and Management"', guide)
+
+    def test_automatic_sections_copy_complete_platform_specific_scheduler_prompts(self):
+        guide = (ROOT / "START HERE.md").read_text(encoding="utf-8")
+        claude = guide.split("#### Schedule Claude Cowork", 1)[1].split(
+            "#### Schedule ChatGPT Codex", 1)[0]
+        chatgpt = guide.split("#### Schedule ChatGPT Codex", 1)[1].split(
+            "### Path B — manual mode", 1)[0]
+
+        for section in (claude, chatgpt):
+            self.assertIn("Name: Auto Anki Optimize", section)
+            self.assertIn("Description:", section)
+            self.assertIn("Instructions for every run:", section)
+            self.assertIn("Read scripts/PROMPT_auto.md and execute it.", section)
+            self.assertIn("Run once per hour for the next 8 hours", section)
+        self.assertIn("Create a scheduled Cowork task", claude)
+        self.assertIn("Working folder: This project folder", claude)
+        self.assertIn("Approval mode: Automatically approve", claude)
+        self.assertIn("Create a standalone scheduled task", chatgpt)
+        self.assertIn("Project: This Local project", chatgpt)
+        self.assertIn("Do not use an isolated worktree", chatgpt)
+
+        script = (ROOT / "control_center/static/app.js").read_text(encoding="utf-8")
+        self.assertIn('["Claude scheduler", "Automate eight hours in Cowork"]', script)
+        self.assertIn('["ChatGPT scheduler", "Automate eight hours in Codex"]', script)
 
     def test_guide_toc_captures_each_chapter_target(self):
         script = (ROOT / "control_center/static/app.js").read_text(encoding="utf-8")
@@ -358,9 +383,12 @@ class UpdateTests(unittest.TestCase):
             self.assertIn("known bug", (backup / "README.md").read_text(encoding="utf-8"))
             self.assertFalse(retired.exists())
             self.assertEqual((backup / retired.name).read_bytes(), b"old publisher launcher\n")
+            expected_release = json.loads(
+                (ROOT / "scripts/UPDATE_MANIFEST.json").read_text(encoding="utf-8")
+            )["release_version"]
             self.assertEqual(
                 json.loads((root / "scripts/UPDATE_MANIFEST.json").read_text())["release_version"],
-                "1.3.0",
+                expected_release,
             )
             self.assertFalse((root / "scripts/.pipeline.lock").exists())
 
