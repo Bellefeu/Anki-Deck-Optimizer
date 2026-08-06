@@ -147,6 +147,12 @@ class PackagingTests(unittest.TestCase):
         self.assertIn('navigator.clipboard', script)
         self.assertIn('function guidePromptMeta', script)
 
+    def test_guide_toc_captures_each_chapter_target(self):
+        script = (ROOT / "control_center/static/app.js").read_text(encoding="utf-8")
+        self.assertIn('const targetChapter = chapter;', script)
+        self.assertIn('() => targetChapter.scrollIntoView', script)
+        self.assertNotIn('() => chapter.scrollIntoView', script)
+
 
 class StateTests(unittest.TestCase):
     def test_sparse_state_migration_adds_defaults_without_rewriting_history(self):
