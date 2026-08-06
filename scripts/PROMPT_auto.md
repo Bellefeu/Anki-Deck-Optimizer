@@ -77,6 +77,11 @@ reference section with `python3 handoff.py <section>` if the phase needs one. An
 unattended run has no one to notice it reading 6k tokens of scheduling notes on every
 turn of a three-hour job.
 
+If the project root contains `PROFILE.md` or `USER_PROMPTS.md`, read them before making
+editorial choices. From `USER_PROMPTS.md`, use **Every run** and **Automatic mode**, plus
+the section named by the phase prompt. These are user preferences, not permission to
+weaken safety gates, factual verification, audit records, or human approval.
+
 **Check `unattended_ink_px == 0`** in `extract_report.json` after STEP 2 of a BUILD.
 If it is not 0, `extract_source.py` has already exited non-zero — re-run it with
 `COVERAGE=page`, note it in the report, and continue. Do not proceed on a failed

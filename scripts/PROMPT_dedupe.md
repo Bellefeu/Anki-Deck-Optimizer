@@ -31,6 +31,11 @@ Read `HANDOFF.md` section 3b, especially **Rule 0** (yield filter — merged con
 belongs in `Extra`), **Rule 5** (interference), and **Rule 8** (a merged card must not name
 the source, by any name — strip attribution as you merge, keep the fact).
 
+If the project root contains `PROFILE.md` or `USER_PROMPTS.md`, read them too. From
+`USER_PROMPTS.md`, use **Every run** and **Final duplicate check**. These are user
+preferences, not permission to weaken safety gates, factual verification, audit records,
+or human approval.
+
 ## STEP 1 — SNAPSHOT FIRST. NON-NEGOTIABLE.
 
 ```bash

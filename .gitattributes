@@ -16,6 +16,8 @@
 
 # PowerShell is happiest with CRLF on Windows.
 *.ps1   text eol=crlf
+*.cmd   text eol=crlf
+*.command text eol=lf
 
 # Never touch these if they ever appear locally.
 *.apkg  binary
