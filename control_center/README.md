@@ -12,6 +12,10 @@ library, binds to `127.0.0.1`, and places a random token on every write request.
 The dashboard can stage source files and one `.apkg`, edit `PROFILE.md` and
 `USER_PROMPTS.md`, open deck review artifacts, launch setup, and install stable releases.
 
+For a pre-Prism installation, a user can launch Prism from a separate fresh download,
+select the old project as the active folder, and install the latest release into it. This
+uses the same legacy backup and rollback path; users should not merge folders by hand.
+
 ## Update safety model
 
 `scripts/UPDATE_MANIFEST.json` is a complete allowlist of publisher-owned files and their

@@ -342,6 +342,24 @@ The patcher follows these rules:
 The update button uses the latest stable GitHub **Release**. It does not run `git pull`,
 and it does not need you to understand Git.
 
+### If your older copy does not have the Control Center yet
+
+Do this once. Do not copy new files over your old folder by hand.
+
+1. Keep your old project folder exactly where it is.
+2. Download the newest repo ZIP from GitHub and extract it to a different folder, such as
+   Downloads. This temporary copy is only the helper.
+3. Open the Control Center from the temporary copy.
+4. Click **Choose folder** at the top. Choose your **old project folder**—the one with your
+   real decks and progress.
+5. Open **Update**, click **Check for updates**, then click **Install update**.
+6. Close the helper. Open the Control Center inside your old project from now on. You may
+   delete the temporary downloaded copy.
+
+Prism treats the old folder as a legacy install. It backs up every existing toolkit file
+the new release will replace, preserves the old state and study files, then tests and
+installs the update. If a check fails, it restores the old folder automatically.
+
 ---
 
 ## PART 4 — MANUAL MODE
