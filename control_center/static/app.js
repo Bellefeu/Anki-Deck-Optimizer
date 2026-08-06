@@ -17,6 +17,50 @@ const $ = (selector, parent = document) => parent.querySelector(selector);
 const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
 const pathMeasure = document.createElement("canvas").getContext("2d");
 
+/* Each view is framed against a different body from the field renderer,
+   pushed right of the reading column and dimmed to whatever that screen
+   can afford. Dense screens get a quieter backdrop; the screens that are
+   mostly heading get a louder one.
+ *
+ * Scale is the lever that matters most. The same number of samples spread
+ * over a larger silhouette gives a dimmer, flatter form, so a body that
+ * reads as luminous string art at a quarter of the viewport reads as a
+ * grey wall at three quarters of it. Small and bright, with a lot of void
+ * around it, is what the reference renders actually do. */
+const FIELD_SCENES = {
+  home: {body: "ruled", x: 0.58, y: 0.38, scale: 0.22, point: 1.05, intensity: 1.25},
+  guide: {body: "weave", x: 0.50, y: 0.12, scale: 0.24, point: 1.00, intensity: 1.45},
+  decks: {body: "foam", x: 0.70, y: 0.40, scale: 0.19, point: 1.00, intensity: 1.05},
+  preferences: {body: "coil", x: 0.74, y: 0.24, scale: 0.17, point: 0.95, intensity: 0.85},
+  updates: {body: "aperture", x: 0.62, y: 0.32, scale: 0.23, point: 1.05, intensity: 1.20},
+};
+
+const field = window.PrismField ? window.PrismField.mount($("#prism-field"), {samples: 220000}) : null;
+
+function currentViewName() {
+  return ($(".view.active")?.id || "view-home").replace(/^view-/, "");
+}
+
+function applyFieldScene(name) {
+  if (!field) return;
+  const scene = FIELD_SCENES[name] || FIELD_SCENES.home;
+  /* Warmth is the one thing the backdrop says about your work rather than
+     about itself: it rises only while a deck is still waiting on you. */
+  const waiting = state.decks.some((deck) => !deck.verified);
+  const warm = waiting && (name === "decks" || name === "home") ? 0.45 : 0.12;
+
+  /* Below the layout breakpoint there is no empty right-hand column to
+     stand the body in, so it moves to the top of the page and shrinks.
+     Left where it is, it would sit directly under the reading column and
+     turn into a grey smear behind the text. */
+  const compact = window.innerWidth < 980;
+  const framed = compact
+    ? {...scene, x: 0.62, y: 0.56, scale: scene.scale * 0.60, intensity: scene.intensity * 0.95}
+    : scene;
+
+  field.setScene(scene.body, {...framed, warm});
+}
+
 async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set("X-Control-Token", TOKEN);
@@ -51,6 +95,7 @@ function setView(name) {
   $$(".nav-button").forEach((button) => button.classList.toggle("active", button.dataset.view === name));
   $$(".view").forEach((view) => view.classList.toggle("active", view.id === `view-${name}`));
   window.scrollTo(0, 0);
+  applyFieldScene(name);
   if (name === "guide") loadGuide();
   if (name === "decks") loadDecks();
   if (name === "preferences") loadPreferences();
@@ -332,9 +377,9 @@ function renderGuide(markdown) {
         chapter.id = `guide-${guideSlug(title)}`;
         const marker = document.createElement("span");
         marker.className = "chapter-marker";
-        marker.textContent = /^PART\s+\d+/i.test(title) ? title.split("—")[0].trim() : "REFERENCE";
+        marker.textContent = /^PART\s+\d+/i.test(title) ? title.split(":")[0].trim() : "REFERENCE";
         const node = document.createElement("h2");
-        appendGuideInline(node, title.replace(/^PART\s+\d+\s+—\s+/i, ""));
+        appendGuideInline(node, title.replace(/^PART\s+\d+\s*:\s*/i, ""));
         chapter.append(marker, node);
         content.append(chapter);
         const link = document.createElement("button");
@@ -517,6 +562,7 @@ async function loadDecks(render = true) {
       state.selectedDeck = state.decks.find((deck) => !deck.verified) || state.decks[0] || null;
     }
     updateContextualPrompts();
+    applyFieldScene(currentViewName());
     if (render) renderDecks();
   } catch (error) {
     toast(error.message, "error");
@@ -1045,9 +1091,9 @@ async function startJob(path, body, kind) {
     state.activeJob = {id: response.job_id, kind};
     const card = $("#job-card");
     card.hidden = false;
-    card.className = "job-card glass";
-    $("#job-label").textContent = kind === "check" ? "Checking for updates…" : "Installing the update…";
-    $("#job-log").textContent = "Starting…";
+    card.className = "band job-card";
+    $("#job-label").textContent = kind === "check" ? "Checking for updates" : "Installing the update";
+    $("#job-log").textContent = "Starting";
     $("#progress-fill").style.width = "8%";
     pollJob();
   } catch (error) {
@@ -1062,7 +1108,7 @@ async function pollJob() {
     const response = await api(`/api/jobs/${active.id}`);
     const job = response.job;
     $("#job-label").textContent = job.label;
-    $("#job-log").textContent = job.messages.join("\n") || "Working…";
+    $("#job-log").textContent = job.messages.join("\n") || "Working";
     $("#progress-fill").style.width = `${progressForStep[job.step] || (job.status === "running" ? 50 : 100)}%`;
     const card = $("#job-card");
     card.classList.toggle("done", job.status === "done");
@@ -1159,6 +1205,13 @@ function bindEvents() {
     if (event.key === "Escape" && !$("#reset-modal").hidden) closeResetModal();
   });
   window.addEventListener("resize", syncProjectPathWidth);
+  /* Crossing the layout breakpoint changes where the field belongs, so
+     the composition has to be recomputed rather than just re-projected. */
+  let reframe = 0;
+  window.addEventListener("resize", () => {
+    window.clearTimeout(reframe);
+    reframe = window.setTimeout(() => applyFieldScene(currentViewName()), 180);
+  });
   $("#jump-prompts").addEventListener("click", () => {
     $("#prompt-library").scrollIntoView({behavior: "smooth", block: "start"});
   });
@@ -1186,4 +1239,5 @@ function bindEvents() {
 }
 
 bindEvents();
+applyFieldScene("home");
 loadStatus();

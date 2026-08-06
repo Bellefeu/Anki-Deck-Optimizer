@@ -1,4 +1,4 @@
-# PROFILE — your preferences, not the pipeline's rules
+# PROFILE: your preferences, not the pipeline's rules
 
 Read at the start of every session, right after `scripts/HANDOFF.md`. Everything here
 is a judgement call that is legitimately yours. Everything in HANDOFF.md is not:
@@ -45,8 +45,8 @@ Edit freely. These are the defaults the pipeline was built around, not commandme
 
 ## Your source's name
 
-Rule 8 says a card never names where it came from. The generic forms — "the module
-states", "according to the course" — are always caught. If your course has a brand
+Rule 8 says a card never names where it came from. The generic forms, such as "the
+module states" or "according to the course", are always caught. If your course has a brand
 name, set it here and every bare mention of it gets caught too:
 
 - **SOURCE_NAME:** (leave blank, or put your course's name here)
@@ -54,8 +54,8 @@ name, set it here and every bare mention of it gets caught too:
 Set it as an environment variable, or add `"source_name": "YourCourse"` to
 `scripts/project_state.json`.
 
-If that name also appears as an ordinary word in your material — a course called
-"Crest" against "the iliac crest" — it is already handled. Extend
+If that name also appears as an ordinary word in your material, such as a course
+called "Crest" against "the iliac crest", it is already handled. Extend
 `FALSE_POSITIVE_BEFORE` / `FALSE_POSITIVE_AFTER` in `scripts/build_deck.py` if your
 particular collision needs it.
 
