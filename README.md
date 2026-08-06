@@ -1,6 +1,6 @@
 # Anki Deck Optimization — starter kit
 
-**New here? Read [`START_HERE.md`](START_HERE.md).** It is a stepwise walkthrough with
+**New here? Read [`START HERE.md`](START%20HERE.md).** It is a stepwise walkthrough with
 every command and every prompt you need to copy, in order.
 
 A pipeline for rebuilding study decks against a course module: it restructures
@@ -11,9 +11,10 @@ It is meant to be driven by an AI agent. You hand the agent a prompt file; the s
 do everything that must be deterministic — database surgery, validation gates, the audit
 trail — and the agent does the editorial judgement the scripts cannot.
 
-**Easiest:** double-click `OPEN_CONTROL_CENTER.cmd` on Windows or
-`OPEN_CONTROL_CENTER.command` on macOS. The local Prism dashboard handles setup, staging,
-preferences, deck review, and safe updates.
+**Easiest:** double-click `Prism Control Center - Windows.cmd` on Windows or
+`Prism Control Center - Mac.command` on macOS. The local Prism dashboard handles setup,
+staging, preferences, deck review, and safe updates. If macOS blocks the first launch,
+follow the five picture-free steps at the top of [`START HERE.md`](START%20HERE.md).
 
 **Impatient in a terminal?** `python3 scripts/bootstrap.py`
 
@@ -30,8 +31,8 @@ You do not have to install any of those yourself.
 ## Five minutes to your first run
 
 ```bash
-bash setup.sh                         # macOS / Linux  - installs everything missing
-.\setup.ps1                           # Windows        - same, via winget
+bash control_center/install/setup.sh  # macOS / Linux  - installs everything missing
+.\control_center\install\setup.ps1    # Windows        - same, via winget
 # then it runs bootstrap.py for you and prints what to do next
 
 # edit PROFILE.md - it is short and it is yours
@@ -50,11 +51,9 @@ Then hand your agent `scripts/PROMPT_build.md`.
 ## Layout
 
 ```
-setup.sh / setup.ps1       one-command install. Run this first.
-OPEN_CONTROL_CENTER.*      local dashboard; no terminal knowledge needed
-START_HERE.md              stepwise walkthrough. Start with this.
+Prism Control Center - *   local dashboard launchers; no terminal knowledge needed
+START HERE.md              stepwise walkthrough. Start with this.
 PROFILE.md                 your private runtime preferences (made by setup)
-PROFILE.template.md        publisher-owned starter profile
 Source Files/              input: one folder of captures per module
 Anki Decks/                input: one .apkg per module
 COMPLETED/                 output: one folder per finished module
@@ -70,7 +69,7 @@ scripts/
   PROMPT_dedupe.md         cross-deck duplicate hunting
   bootstrap.py             run this first
   selftest.py              isolated safety checks. Run in any new environment.
-control_center/            Prism dashboard and release-based safe patcher
+control_center/            Prism dashboard, installer, templates, and safe patcher
 ```
 
 ## The four things that will save you a day each

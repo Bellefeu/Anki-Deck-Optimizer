@@ -1,9 +1,9 @@
 <#
     One-command setup for Windows.
 
-        .\setup.ps1              install everything missing, then run bootstrap
-        .\setup.ps1 -DryRun      show exactly what it would run, change nothing
-        .\setup.ps1 -Yes         do not ask before installing
+        .\control_center\install\setup.ps1              install and check
+        .\control_center\install\setup.ps1 -DryRun      show changes only
+        .\control_center\install\setup.ps1 -Yes         do not ask before installing
 
     Installs Python 3.12, poppler, tesseract and Node.js via winget - but only the
     ones you are actually missing. Safe to re-run.
@@ -16,7 +16,7 @@
         Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
     winget ships with Windows 11 and recent Windows 10. If you do not have it,
-    install "App Installer" from the Microsoft Store, or use WSL and ./setup.sh
+    install "App Installer" from the Microsoft Store, or use WSL and the bash installer
     instead - WSL is honestly the smoother path for this pipeline.
 #>
 
@@ -24,7 +24,8 @@
 param([switch]$DryRun, [switch]$Yes)
 
 $ErrorActionPreference = 'Stop'
-Set-Location -Path $PSScriptRoot
+$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+Set-Location -Path $ProjectRoot
 
 function Bold($m) { Write-Host $m -ForegroundColor White }
 function Ok($m)   { Write-Host "  ok    $m" -ForegroundColor Green }
@@ -65,7 +66,7 @@ Write-Host ""
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     Bad "winget not found."
     Write-Host "     Install 'App Installer' from the Microsoft Store, then re-run."
-    Write-Host "     Or install WSL (wsl --install), then run ./setup.sh inside it."
+    Write-Host "     Or install WSL (wsl --install), then open Prism again."
     exit 1
 }
 
@@ -103,7 +104,7 @@ if ($pkgs.Count -eq 0) {
     Write-Host ""
     Write-Host "  Note: winget adds these to PATH, but an already-open terminal will not" -ForegroundColor Yellow
     Write-Host "  see them. If the next step says something is still missing, CLOSE this" -ForegroundColor Yellow
-    Write-Host "  window, open a new PowerShell, and run .\setup.ps1 again." -ForegroundColor Yellow
+    Write-Host "  window. Close it, then open Prism again." -ForegroundColor Yellow
     if (-not $py) { $py = Find-Python }
 }
 
@@ -117,7 +118,7 @@ if ($DryRun) {
 }
 if (-not $py) {
     Bad "Python 3.10+ still not on PATH."
-    Write-Host "     Close this window, open a NEW PowerShell, and run .\setup.ps1 again."
+    Write-Host "     Close this window, then open Prism again."
     exit 1
 }
 Write-Host ""

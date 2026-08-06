@@ -2,9 +2,9 @@
 #
 # One-command setup for macOS and Linux.
 #
-#   bash setup.sh              install everything missing, then run bootstrap
-#   bash setup.sh --dry-run    show exactly what it would run, change nothing
-#   bash setup.sh --yes        do not ask before installing
+#   bash control_center/install/setup.sh              install and check
+#   bash control_center/install/setup.sh --dry-run    show changes only
+#   bash control_center/install/setup.sh --yes        do not ask before installing
 #
 # Installs: Python 3.10+, poppler, tesseract, Node.js - but only the ones you are
 # actually missing. Safe to re-run; it skips whatever is already there.
@@ -36,8 +36,8 @@ for a in "$@"; do
   esac
 done
 
-HERE=$(cd "$(dirname "$0")" && pwd)
-cd "$HERE"
+PROJECT_ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+cd "$PROJECT_ROOT"
 
 bold() { printf '\033[1m%s\033[0m\n' "$*"; }
 ok()   { printf '  \033[32mok\033[0m    %s\n' "$*"; }
@@ -86,7 +86,7 @@ case "$OS" in
       if command -v "$m" >/dev/null 2>&1; then PM="$m"; break; fi
     done
     ;;
-  *) err "Unsupported OS: $OS. On Windows use setup.ps1 (or WSL, then re-run this)."; exit 1 ;;
+  *) err "Unsupported OS: $OS. On Windows use the Prism launcher (or WSL, then re-run this)."; exit 1 ;;
 esac
 [ -n "${SETUP_FAKE_PM:-}" ] && PM="$SETUP_FAKE_PM"
 
@@ -146,7 +146,7 @@ else
       done
     else
       err "Cannot continue without a package manager."
-      echo "     Install Homebrew yourself: https://brew.sh   then re-run: bash setup.sh"
+      echo "     Install Homebrew yourself: https://brew.sh, then open Prism again."
       exit 1
     fi
   fi
@@ -220,7 +220,7 @@ if [ "$DRY" = "1" ]; then
 fi
 if [ -z "$PY" ]; then
   err "Python 3.10+ still not found after install."
-  echo "     Close this terminal, open a NEW one, and re-run: bash setup.sh"
+  echo "     Close this terminal, then open Prism again."
   exit 1
 fi
 echo

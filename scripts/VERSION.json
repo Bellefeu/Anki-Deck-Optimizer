@@ -1,8 +1,8 @@
 {
- "version": "77f949f505df",
+ "version": "fe9ea7072970",
  "files": {
   "deps.py": "4c25e0a040c89566",
-  "bootstrap.py": "ff5b9913fb562026",
+  "bootstrap.py": "7344baec6f7e9390",
   "build_queue.py": "adb434a6aeb3c88b",
   "extract_source.py": "bb142334037ad3d1",
   "build_deck.py": "bf692062d59130fe",

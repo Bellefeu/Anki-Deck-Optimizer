@@ -13,9 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "scripts/UPDATE_MANIFEST.json"
 
 ROOT_FILES = {
-    ".gitattributes", ".gitignore", "LICENSE", "README.md", "START_HERE.md",
-    "setup.sh", "setup.ps1", "PROFILE.template.md",
-    "OPEN_CONTROL_CENTER.command", "OPEN_CONTROL_CENTER.cmd", "open_control_center.sh",
+    ".gitattributes", ".gitignore", "LICENSE", "README.md", "START HERE.md",
+    "Prism Control Center - Mac.command", "Prism Control Center - Windows.cmd",
     "Source Files/README.md", "Anki Decks/README.md", "COMPLETED/README.md",
 }
 

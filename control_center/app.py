@@ -63,7 +63,8 @@ override safety gates, factual verification, audit requirements, or human approv
 
 def is_project(path):
     path = Path(path)
-    return (path / "scripts").is_dir() and (path / "setup.sh").is_file()
+    return ((path / "scripts").is_dir()
+            and (path / "control_center/app.py").is_file())
 
 
 def safe_child(root, candidate):
@@ -106,13 +107,14 @@ def launch_setup(root):
     if sys.platform == "win32":
         command = [
             "powershell.exe", "-NoExit", "-ExecutionPolicy", "Bypass",
-            "-File", str(root / "setup.ps1"),
+            "-File", str(root / "control_center/install/setup.ps1"),
         ]
         subprocess.Popen(command, cwd=root,
                          creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
         return "PowerShell opened. Follow the setup messages there."
     if sys.platform == "darwin":
-        script = f'cd {shlex_quote(str(root))}; bash setup.sh'
+        script = (f'cd {shlex_quote(str(root))}; '
+                  'bash control_center/install/setup.sh')
         escaped = script.replace("\\", "\\\\").replace('"', '\\"')
         subprocess.Popen([
             "osascript", "-e", f'tell application "Terminal" to do script "{escaped}"',
@@ -126,12 +128,16 @@ def launch_setup(root):
         ("konsole", ["konsole", "-e"]),
         ("xfce4-terminal", ["xfce4-terminal", "-e"]),
     ]
-    shell_command = f"cd {shlex_quote(str(root))}; bash setup.sh; exec bash"
+    shell_command = (f"cd {shlex_quote(str(root))}; "
+                     "bash control_center/install/setup.sh; exec bash")
     for executable, prefix in terminals:
         if shutil.which(executable):
             subprocess.Popen(prefix + ["bash", "-lc", shell_command])
             return "A terminal opened. Follow the setup messages there."
-    raise RuntimeError("No graphical terminal was found. Run `bash setup.sh` manually.")
+    raise RuntimeError(
+        "No graphical terminal was found. Run "
+        "`bash control_center/install/setup.sh` manually."
+    )
 
 
 def shlex_quote(value):
@@ -418,8 +424,9 @@ class Handler(BaseHTTPRequestHandler):
             elif parsed.path == "/api/preferences":
                 root = self.app.root
                 profile = root / "PROFILE.md"
-                if not profile.exists() and (root / "PROFILE.template.md").exists():
-                    atomic_write_bytes(profile, (root / "PROFILE.template.md").read_bytes())
+                template = root / "control_center/templates/PROFILE.template.md"
+                if not profile.exists() and template.exists():
+                    atomic_write_bytes(profile, template.read_bytes())
                 prompts = root / "USER_PROMPTS.md"
                 self._json({
                     "ok": True,

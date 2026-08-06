@@ -16,14 +16,10 @@
 !.gitignore
 !.gitattributes
 !README.md
-!START_HERE.md
-!setup.sh
-!setup.ps1
-!PROFILE.template.md
+!START HERE.md
 !LICENSE
-!OPEN_CONTROL_CENTER.command
-!OPEN_CONTROL_CENTER.cmd
-!open_control_center.sh
+!Prism Control Center - Mac.command
+!Prism Control Center - Windows.cmd
 !scripts/
 !scripts/*.py
 !scripts/*.js

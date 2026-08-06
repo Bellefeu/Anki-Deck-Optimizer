@@ -17,11 +17,26 @@ You do not need to know terminal commands.
 
 ### Open the Control Center
 
-- **Windows:** double-click `OPEN_CONTROL_CENTER.cmd`.
-- **Mac:** double-click `OPEN_CONTROL_CENTER.command`. If macOS blocks it, right-click
-  the file, choose **Open**, then choose **Open** again.
-- **Linux:** double-click `open_control_center.sh` and choose **Run**. If your file app
-  opens it as text, right-click it and choose **Run as a Program**.
+- **Windows:** double-click **Prism Control Center - Windows.cmd**.
+- **Mac:** double-click **Prism Control Center - Mac.command**.
+
+#### If your Mac says Apple could not verify the file
+
+This message can appear the first time because the launcher came from GitHub and is not
+signed by an Apple Developer ID. Prism has not run yet.
+
+1. Click **Done**. Do not click **Move to Trash**.
+2. Open the **Apple menu** at the top-left of your screen.
+3. Click **System Settings**, then **Privacy & Security**.
+4. Scroll down and click **Open Anyway** beside the blocked Prism launcher.
+5. Confirm, then click **Open**.
+
+You only need to approve this copy once. After that, open it normally. These are
+[Apple's current steps for opening an unnotarized app](https://support.apple.com/en-us/102445).
+
+The main folder intentionally contains only two launchers: one marked **Mac** and one
+marked **Windows**. The setup scripts and templates are stored inside `control_center/`
+so a new user does not have to choose among technical files.
 
 Your web browser will open a page named **Prism**. Keep the small terminal window open
 while you use it. Prism runs only on your computer. It does not upload your decks to a
@@ -83,13 +98,13 @@ Once your terminal is in the right place, copy and paste the command for your op
 macOS or Linux
 (Bash)
 ```
-bash setup.sh
+bash control_center/install/setup.sh
 ```
 
 Windows
 (PowerShell)
 ```
-.\setup.ps1
+.\control_center\install\setup.ps1
 ```
 
 That's it! The installer will figure out what you are missing—Python, Poppler, Tesseract, Node—and install only those. If you already have everything, it skips straight through. It is safe to run this script again at any time.
@@ -99,19 +114,20 @@ A few things worth knowing:
 - **It may ask for your password.** Installing system software may require it. The script
   prints every command before it runs, and never runs anything as administrator silently.
 - **Want to see what it would do first?** On macOS or Linux, run
-  `bash setup.sh --dry-run`. On Windows, run `.\setup.ps1 -DryRun`. These commands print
+  `bash control_center/install/setup.sh --dry-run`. On Windows, run
+  `.\control_center\install\setup.ps1 -DryRun`. These commands print
   the planned steps and change nothing.
 - **macOS:** if you do not have Homebrew, the installer offers to install it. The setup
   script uses Homebrew to install the missing tools.
 - **Windows:** it uses `winget`, which ships with Windows 11 and recent Windows 10. If
   PowerShell refuses to run the script, run this once:
   `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
-  Honestly, if you have WSL, installing WSL and using `bash setup.sh` inside it is the
+  Honestly, if you have WSL, installing WSL and using the bash installer inside it is the
   smoother path for this pipeline.
 - **If it installs things and the next step still says they are missing:** close the
   terminal, open a new one, and run it again. A terminal that was already open does not
   see newly installed programs.
-- **Run it as `bash setup.sh`, not `./setup.sh`.** macOS ships an ancient bash (3.2, from
+- **Run it with `bash`, as shown above.** macOS ships an ancient bash (3.2, from
   2007), so the script is written to POSIX rules to stay compatible with it. Invoking it
   explicitly avoids any question of which shell picks it up.
 
@@ -505,8 +521,9 @@ itself so it cannot ship two cards that contradict each other.
 | Counts do not reconcile at build time | Something edited the deck outside `ops.json`. The build is supposed to fail here — do not force it. |
 | `unaccounted_ink_px` is not 0 | The coverage proof failed. Re-run extraction with `COVERAGE=page` and it reads whole pages instead. |
 | A tool is "missing" right after installing it | Your terminal was open before the install. Close it, open a new one, re-run. |
-| PowerShell won't run `setup.ps1` | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, once. |
-| Anything else | Run the installer again: `bash setup.sh` on macOS/Linux or `.\setup.ps1` on Windows. |
+| PowerShell will not run the installer | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, once. |
+| Mac says Apple could not verify the launcher | Click **Done**, then use **System Settings → Privacy & Security → Open Anyway**. |
+| Anything else | Open Prism and click **Open guided setup** again. |
 
 **Read these, in this order, if you want more:**
 

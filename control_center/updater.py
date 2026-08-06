@@ -414,6 +414,8 @@ def install_update(root, *, release=None, archive=None, staged_directory=None,
         _emit(callback, f"Backup saved to {backup.name}", step="backup")
 
         new_paths = set(manifest["files"])
+        retired_paths = (set(current_manifest["files"]) - new_paths
+                         if current_manifest else set())
         installed_paths = new_paths | {MANIFEST_REL.as_posix()}
         created = {path for path in installed_paths if not (root / path).exists()}
         for generated in (STATE_REL, PROFILE_REL, Path("scripts/HANDOFF.md"),
@@ -424,6 +426,15 @@ def install_update(root, *, release=None, archive=None, staged_directory=None,
         for index, relative in enumerate(sorted(new_paths), start=1):
             _atomic_copy(staged_root / relative, root / relative)
             _emit(callback, f"Installed {index}/{len(new_paths)} safe toolkit files")
+        # A publisher may move or rename its own files between releases. Only
+        # paths named by the previously verified publisher manifest may be
+        # retired. Private/runtime paths never enter this set, and every retired
+        # file is already in the rollback backup.
+        for relative in sorted(retired_paths):
+            old_path = root / relative
+            if old_path.is_file() or old_path.is_symlink():
+                old_path.unlink()
+                _emit(callback, f"Retired old toolkit file: {relative}")
         # The manifest cannot hash itself, so it is copied separately after every
         # file it describes has passed verification.
         _atomic_copy(staged_root / MANIFEST_REL, root / MANIFEST_REL)
@@ -433,7 +444,7 @@ def install_update(root, *, release=None, archive=None, staged_directory=None,
         # bundle never supplies or overwrites project_state.json.
         staged_state_io.save_state(migrated, live_state_path, backup=True)
         if not (root / PROFILE_REL).exists():
-            profile_template = root / "PROFILE.template.md"
+            profile_template = root / "control_center/templates/PROFILE.template.md"
             if profile_template.exists():
                 _atomic_copy(profile_template, root / PROFILE_REL)
 

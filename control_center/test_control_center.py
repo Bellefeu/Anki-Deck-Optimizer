@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -113,6 +114,29 @@ def private_snapshot(root):
     return {relative: (root / relative).read_bytes() for relative in paths}
 
 
+class PackagingTests(unittest.TestCase):
+    def test_root_has_only_the_beginner_facing_launchers_and_start_guide(self):
+        expected = (
+            "START HERE.md",
+            "Prism Control Center - Mac.command",
+            "Prism Control Center - Windows.cmd",
+        )
+        for relative in expected:
+            with self.subTest(relative=relative):
+                self.assertTrue((ROOT / relative).is_file())
+        for retired in (
+            "START_HERE.md", "OPEN_CONTROL_CENTER.command",
+            "OPEN_CONTROL_CENTER.cmd", "open_control_center.sh",
+            "setup.sh", "setup.ps1", "PROFILE.template.md",
+        ):
+            with self.subTest(retired=retired):
+                self.assertFalse((ROOT / retired).exists())
+        if os.name != "nt":
+            self.assertTrue(os.access(ROOT / "Prism Control Center - Mac.command", os.X_OK))
+            self.assertTrue(os.access(ROOT / "control_center/launch.sh", os.X_OK))
+            self.assertTrue(os.access(ROOT / "control_center/install/setup.sh", os.X_OK))
+
+
 class StateTests(unittest.TestCase):
     def test_sparse_state_migration_adds_defaults_without_rewriting_history(self):
         before = {"project": "used", "run_count": 9,
@@ -202,6 +226,14 @@ class UpdateTests(unittest.TestCase):
     def test_successful_update_preserves_used_project_bytes_and_statuses(self):
         with tempfile.TemporaryDirectory(dir=ROOT.parent) as temp:
             root = make_used_fixture(temp)
+            retired = root / "OLD_CONTROL_CENTER.command"
+            retired.write_bytes(b"old publisher launcher\n")
+            old_manifest_path = root / "scripts/UPDATE_MANIFEST.json"
+            old_manifest = json.loads(old_manifest_path.read_text(encoding="utf-8"))
+            old_manifest["files"][retired.name] = hashlib.sha256(
+                retired.read_bytes()).hexdigest()
+            old_manifest_path.write_text(
+                json.dumps(old_manifest, indent=2) + "\n", encoding="utf-8")
             before = private_snapshot(root)
             result = updater.install_update(root, staged_directory=ROOT)
             after = private_snapshot(root)
@@ -215,9 +247,11 @@ class UpdateTests(unittest.TestCase):
             self.assertNotIn("known bug", (root / "README.md").read_text(encoding="utf-8"))
             backup = Path(result["backup"])
             self.assertIn("known bug", (backup / "README.md").read_text(encoding="utf-8"))
+            self.assertFalse(retired.exists())
+            self.assertEqual((backup / retired.name).read_bytes(), b"old publisher launcher\n")
             self.assertEqual(
                 json.loads((root / "scripts/UPDATE_MANIFEST.json").read_text())["release_version"],
-                "1.1.0",
+                "1.1.1",
             )
             self.assertFalse((root / "scripts/.pipeline.lock").exists())
 
