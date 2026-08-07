@@ -579,6 +579,38 @@ class RecipeTests(unittest.TestCase):
         self.assertIs(plist["NSHighResolutionCapable"], True)
         self.assertEqual(plist["CFBundleIconFile"], "PRISM.icns")
 
+    def test_no_exclusion_is_one_that_breaks_pyinstaller_itself(self):
+        """Trimming distutils or setuptools does not make a smaller build, it
+        makes no build: PyInstaller's own distutils hook aliases one onto the
+        other and raises if either end has been excluded. Only the Windows
+        runner reaches that hook, so nothing local catches it."""
+        overlap = set(recipe.EXCLUDED) & set(recipe.UNSAFE_TO_EXCLUDE)
+        self.assertEqual(overlap, set(), f"these exclusions break the build: {sorted(overlap)}")
+
+    def test_no_exclusion_collides_with_a_pyinstaller_aliasing_hook(self):
+        """The live version of the check above.
+
+        PyInstaller aliases modules during analysis through the hooks in
+        pre_safe_import_module, and excluding either end of an alias kills the
+        build. Reading the installed hook directory catches a new collision
+        the day PyInstaller adds one, rather than the next time somebody
+        watches a Windows job fail. Skipped where PyInstaller is absent, which
+        is the whole point of the standard-library test workflow; the release
+        workflow installs it and runs this before it builds anything.
+        """
+        try:
+            import PyInstaller.hooks.pre_safe_import_module as hooks
+        except ImportError:
+            self.skipTest("PyInstaller is not installed in this environment")
+
+        names = {entry[5:-3] for entry in os.listdir(os.path.dirname(hooks.__file__))
+                 if entry.startswith("hook-") and entry.endswith(".py")}
+        self.assertTrue(names, "no pre-safe-import hooks were found to check against")
+        # A hook on gi.repository.Gtk also makes excluding gi dangerous.
+        risky = names | {name.split(".")[0] for name in names}
+        collisions = sorted(set(recipe.EXCLUDED) & risky)
+        self.assertEqual(collisions, [], f"these exclusions break PyInstaller: {collisions}")
+
     def test_the_windows_version_resource_makes_its_own_directory(self):
         """It is written before PyInstaller runs, which is what creates the
         work folder, and only on Windows. Depending on a caller to have made
