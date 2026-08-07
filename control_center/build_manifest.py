@@ -39,13 +39,40 @@ def digest(path):
     return value.hexdigest()
 
 
+def tracked_files():
+    """Everything git holds, or None when this is not a checkout.
+
+    The two lists above name their files, but control_center is taken whole,
+    and a real folder on a real machine collects things nobody meant to
+    publish: a .DS_Store, an editor's swap file, a scratch copy. Any of them
+    reaching the allowlist produces a manifest that only the machine which
+    built it can satisfy, and every fresh checkout reports the file missing.
+    That is a broken release rather than a broken build, which is the worse
+    of the two, so the walk below is filtered by what git actually tracks.
+    """
+    try:
+        listed = subprocess.run(
+            ["git", "ls-files", "-z"], capture_output=True, text=True,
+            cwd=str(ROOT), timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if listed.returncode != 0:
+        return None
+    return {ROOT / name for name in listed.stdout.split("\0") if name}
+
+
 def patchable_files():
     paths = {ROOT / name for name in ROOT_FILES}
     paths.update(ROOT / "scripts" / name for name in SCRIPT_FILES)
     control = ROOT / "control_center"
-    paths.update(path for path in control.rglob("*")
-                 if path.is_file() and path.name != "UPDATE_MANIFEST.json"
-                 and "__pycache__" not in path.parts)
+    carried = [path for path in control.rglob("*")
+               if path.is_file() and path.name != "UPDATE_MANIFEST.json"
+               and "__pycache__" not in path.parts]
+    known = tracked_files()
+    if known is not None:
+        carried = [path for path in carried if path in known]
+    paths.update(carried)
     missing = [str(path.relative_to(ROOT)) for path in paths if not path.is_file()]
     if missing:
         raise SystemExit("Cannot build manifest; files missing:\n  " + "\n  ".join(sorted(missing)))
