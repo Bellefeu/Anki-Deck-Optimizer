@@ -11,6 +11,8 @@
 *.js    text eol=lf
 *.md    text eol=lf
 *.json  text eol=lf
+*.yml   text eol=lf
+*.txt   text eol=lf
 .gitignore     text eol=lf
 .gitattributes text eol=lf
 
@@ -19,9 +21,16 @@
 *.cmd   text eol=crlf
 *.command text eol=lf
 
-# Never touch these if they ever appear locally.
+# Never touch these if they ever appear locally. The icon formats are here
+# because packaging/icons.py writes them into build/ on every build, and a
+# newline substitution would corrupt a container that is mostly PNG chunks.
 *.apkg  binary
 *.pdf   binary
 *.docx  binary
 *.png   binary
 *.jpg   binary
+*.ico   binary
+*.icns  binary
+*.dmg   binary
+*.deb   binary
+*.exe   binary

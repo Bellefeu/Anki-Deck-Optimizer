@@ -11,6 +11,8 @@ const state = {
   resetStep: 1,
   guideLoaded: false,
   patchNotes: {},
+  workspace: null,
+  integrity: null,
 };
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
@@ -33,7 +35,11 @@ const pathMeasure = document.createElement("canvas").getContext("2d");
    them from whatever is lit behind. The guide and the deck screens put
    their content on filled panels, so their bodies can stay where they
    are and keep following the page down. */
+/* First run has no rail and no top bar, so its body can sit further into
+   the page than any other screen and stay there: there is nothing below
+   the fold to be lit from behind. */
 const FIELD_SCENES = {
+  welcome: {body: "aperture", x: 0.74, y: 0.42, scale: 0.20, point: 1.00, intensity: 1.00, recede: 0.35},
   home: {body: "ruled", x: 0.58, y: 0.38, scale: 0.22, point: 1.05, intensity: 1.25, recede: 1.0},
   guide: {body: "weave", x: 0.50, y: 0.12, scale: 0.24, point: 1.00, intensity: 1.45, recede: 0.45},
   decks: {body: "foam", x: 0.70, y: 0.40, scale: 0.19, point: 1.00, intensity: 1.05, recede: 0.3},
@@ -585,19 +591,157 @@ function syncProjectPathWidth() {
   input.style.width = `${Math.max(150, Math.min(measured, available))}px`;
 }
 
+/* ------------------------------------------------------------------ *
+ * First run
+ *
+ * A downloaded PRISM has no folder to work on until someone says where it
+ * should be. Until then the rail, the top bar and every view are simply
+ * not drawn, because none of them can answer a question about a project
+ * that does not exist yet.
+ * ------------------------------------------------------------------ */
+
+function showWelcome(show) {
+  document.body.classList.toggle("needs-workspace", show);
+  $("#welcome").hidden = !show;
+  applyFieldScene(show ? "welcome" : currentViewName());
+}
+
+function setWelcomeStatus(message, tone = "") {
+  const node = $("#welcome-status");
+  node.textContent = message || "";
+  if (tone) node.dataset.state = tone;
+  else delete node.dataset.state;
+}
+
+function welcomeBusy(busy) {
+  for (const id of ["#welcome-create", "#welcome-browse", "#welcome-open"]) {
+    $(id).disabled = busy;
+  }
+}
+
+async function loadWorkspaceOptions() {
+  try {
+    const options = await api("/api/workspace");
+    state.workspace = options;
+    $("#welcome-eyebrow").textContent = `PRISM ${options.app_version}`;
+    const input = $("#welcome-path");
+    if (!input.value.trim()) input.value = options.suggested;
+    const recent = $("#welcome-recent");
+    recent.replaceChildren();
+    for (const path of options.recent) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = path;
+      button.addEventListener("click", () => openWorkspace(path));
+      recent.append(button);
+    }
+    if (!options.can_create) {
+      $("#welcome-create").disabled = true;
+      setWelcomeStatus(
+        "This copy of PRISM is missing its toolkit payload, so it cannot create a "
+        + "workspace. Download PRISM again, or open a folder you already have.",
+        "error",
+      );
+    }
+  } catch (error) {
+    setWelcomeStatus(error.message, "error");
+  }
+}
+
+async function enterWorkspace(path) {
+  state.selectedDeck = null;
+  state.patchNotes = {};
+  state.update = null;
+  state.guideLoaded = false;
+  state.integrity = null;
+  showWelcome(false);
+  await loadStatus();
+  setView("home");
+  if (path) toast(`Working in ${path}`, "success");
+}
+
+async function createWorkspace() {
+  const path = $("#welcome-path").value.trim();
+  if (!path) {
+    setWelcomeStatus("Give the folder a name before creating it.", "error");
+    return;
+  }
+  welcomeBusy(true);
+  setWelcomeStatus("Laying down the toolkit and checking every file", "working");
+  try {
+    const result = await api("/api/workspace/create", {method: "POST", body: {path}});
+    setWelcomeStatus(`Workspace ready at ${result.workspace}`, "done");
+    await enterWorkspace(result.workspace);
+  } catch (error) {
+    setWelcomeStatus(error.message, "error");
+  } finally {
+    welcomeBusy(false);
+  }
+}
+
+async function browseForNewWorkspace() {
+  welcomeBusy(true);
+  try {
+    const result = await api("/api/workspace/browse", {method: "POST", body: {mode: "create"}});
+    if (result.path) {
+      $("#welcome-path").value = result.suggestion || result.path;
+      setWelcomeStatus("");
+    }
+  } catch (error) {
+    setWelcomeStatus(error.message, "error");
+  } finally {
+    welcomeBusy(false);
+  }
+}
+
+async function openWorkspace(path) {
+  welcomeBusy(true);
+  setWelcomeStatus("Opening that folder", "working");
+  try {
+    const result = await api("/api/workspace/open", {method: "POST", body: {path}});
+    await enterWorkspace(result.workspace);
+  } catch (error) {
+    setWelcomeStatus(error.message, "error");
+  } finally {
+    welcomeBusy(false);
+  }
+}
+
+async function browseForExistingWorkspace() {
+  welcomeBusy(true);
+  try {
+    const result = await api("/api/workspace/browse", {method: "POST", body: {mode: "open"}});
+    if (result.path) {
+      await openWorkspace(result.path);
+      return;
+    }
+  } catch (error) {
+    setWelcomeStatus(error.message, "error");
+  } finally {
+    welcomeBusy(false);
+  }
+}
+
 async function loadStatus() {
   try {
     state.status = await api("/api/status");
     const data = state.status;
+    $("#rail-version").textContent = `PRISM ${data.app_version}`;
+    $("#rail-toolkit").textContent = data.version ? `toolkit ${data.version}` : "";
+    renderHealth(data.health);
+    if (!data.ready) {
+      showWelcome(true);
+      await loadWorkspaceOptions();
+      return;
+    }
+    showWelcome(false);
     $("#project-path").value = data.project;
     syncProjectPathWidth();
-    $("#rail-version").textContent = data.version;
     const pipeline = data.pipeline;
     $("#metric-total").textContent = pipeline.modules;
     $("#metric-review").textContent = pipeline.built_unverified + pipeline.in_progress;
     $("#metric-verified").textContent = pipeline.verified;
     $("#metric-staged").textContent = data.staged.decks;
-    renderHealth(data.health);
     await loadDecks(false);
     renderNextReview();
   } catch (error) {
@@ -837,7 +981,7 @@ function renderDeckDetail(deck) {
   const correctHeading = document.createElement("h4");
   correctHeading.textContent = "Something should change";
   const correctCopy = document.createElement("p");
-  correctCopy.textContent = "Describe the outcome you want. Prism adds the deck and patch instructions.";
+  correctCopy.textContent = "Describe the outcome you want. PRISM adds the deck and patch instructions.";
   const feedback = document.createElement("textarea");
   feedback.className = "judgement-feedback";
   feedback.maxLength = 6000;
@@ -1152,6 +1296,79 @@ async function runSetup() {
   }
 }
 
+/* ------------------------------------------------------------------ *
+ * Toolkit integrity
+ *
+ * A workspace is publisher files plus your own work, and only the first
+ * half has a known answer. Missing files can be put back from the copy
+ * inside PRISM; edited ones are reported and left exactly as they are,
+ * because replacing them would throw away work with no way back.
+ * ------------------------------------------------------------------ */
+
+function renderIntegrity(report, {restored = 0} = {}) {
+  state.integrity = report;
+  const detail = $("#integrity-detail");
+  const missing = report.missing || [];
+  const altered = report.altered || [];
+  detail.replaceChildren();
+
+  const lines = [];
+  if (restored) {
+    lines.push([`Restored ${restored} ${restored === 1 ? "file" : "files"} from the copy inside PRISM.`, "ok"]);
+  }
+  if (missing.length) {
+    lines.push([`${missing.length} toolkit ${missing.length === 1 ? "file is" : "files are"} missing.`, "warn"]);
+  }
+  if (altered.length) {
+    lines.push([`${altered.length} toolkit ${altered.length === 1 ? "file differs" : "files differ"} from the published copy. Nothing was changed.`, "warn"]);
+  }
+  if (!missing.length && !altered.length && !restored) {
+    lines.push(["Every toolkit file matches the published copy.", "ok"]);
+  }
+  for (const [text, tone] of lines) {
+    const note = document.createElement("p");
+    note.className = "integrity-note";
+    note.dataset.tone = tone;
+    note.textContent = text;
+    detail.append(note);
+  }
+  for (const path of [...missing, ...altered].slice(0, 12)) {
+    const item = document.createElement("code");
+    item.textContent = path;
+    detail.append(item);
+  }
+  $("#repair-integrity").disabled = missing.length === 0;
+  $("#integrity-heading").textContent = missing.length || altered.length
+    ? "Toolkit needs attention" : "Toolkit is intact";
+}
+
+async function checkIntegrity() {
+  const button = $("#check-integrity");
+  button.disabled = true;
+  try {
+    const report = await api("/api/workspace/inspect", {method: "POST", body: {}});
+    renderIntegrity(report);
+  } catch (error) {
+    toast(error.message, "error");
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function repairIntegrity() {
+  const button = $("#repair-integrity");
+  button.disabled = true;
+  try {
+    const result = await api("/api/workspace/repair", {method: "POST", body: {}});
+    const report = await api("/api/workspace/inspect", {method: "POST", body: {}});
+    renderIntegrity(report, {restored: (result.restored || []).length});
+    toast(result.message, "success");
+  } catch (error) {
+    toast(error.message, "error");
+    button.disabled = false;
+  }
+}
+
 const progressForStep = {
   start: 8, check: 24, download: 28, verify: 42, test: 55,
   backup: 68, rollback: 72, done: 100, error: 100,
@@ -1313,7 +1530,34 @@ function bindEvents() {
       startJob("/api/update/install", {}, "install");
     }
   });
+  $("#check-integrity").addEventListener("click", checkIntegrity);
+  $("#repair-integrity").addEventListener("click", repairIntegrity);
+  $("#welcome-create").addEventListener("click", createWorkspace);
+  $("#welcome-browse").addEventListener("click", browseForNewWorkspace);
+  $("#welcome-open").addEventListener("click", browseForExistingWorkspace);
+  $("#welcome-path").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") createWorkspace();
+  });
 }
+
+/* The application window drives the page through this, so a menu item can
+   move the view or report something without the shell needing to know how
+   any of it is built. */
+window.prismShell = {
+  showView(name) {
+    if (document.body.classList.contains("needs-workspace")) return false;
+    setView(name);
+    return true;
+  },
+  toast(message, kind) {
+    toast(String(message || ""), kind === "error" ? "error" : "success");
+    return true;
+  },
+  refresh() {
+    loadStatus();
+    return true;
+  },
+};
 
 bindEvents();
 applyFieldScene("home");

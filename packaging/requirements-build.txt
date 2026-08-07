@@ -1,0 +1,22 @@
+# Build-time only. Nothing here is needed to run PRISM from a clone, and
+# nothing here reaches a workspace: the frozen application carries its own
+# copies and the pipeline scripts install their own dependencies separately.
+
+pyinstaller>=6.10,<7
+pywebview>=5.3,<6
+
+# pywebview's platform bindings. Each one is a no-op on the other systems, so
+# the whole file installs cleanly everywhere and only the relevant lines do
+# any work.
+pyobjc-core>=10.1; sys_platform == "darwin"
+pyobjc-framework-Cocoa>=10.1; sys_platform == "darwin"
+pyobjc-framework-WebKit>=10.1; sys_platform == "darwin"
+pyobjc-framework-Quartz>=10.1; sys_platform == "darwin"
+pythonnet>=3.0.3; sys_platform == "win32"
+cffi>=1.16; sys_platform == "win32"
+
+# On Linux the GTK and WebKit2 bindings come from the distribution, not from
+# pip, because they have to match the system libraries they wrap:
+#   Debian, Ubuntu:  sudo apt install python3-gi gir1.2-webkit2-4.1
+#   Fedora:          sudo dnf install python3-gobject webkit2gtk4.1
+#   Arch:            sudo pacman -S python-gobject webkit2gtk-4.1

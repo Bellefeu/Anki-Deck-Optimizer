@@ -7,43 +7,65 @@ You can use either **Claude Cowork** or **Codex in the ChatGPT desktop app**. Bo
 read this folder, run the scripts, and follow the prompt files. A normal web chat cannot
 work directly in a folder on your computer.
 
-The easiest path is the **Prism Control Center**. It handles updates, setup, staging,
+The easiest path is the **PRISM** application. It handles updates, setup, staging,
 preferences, deck review, and copy-ready prompts. When the text says to paste or run a
 code-style box, copy that box exactly; other boxes are folder-layout examples. Inside
-Prism, choose a review deck once and every `<module>` token is replaced with that deck's
+PRISM, choose a review deck once and every `<module>` token is replaced with that deck's
 real name before you copy.
 
-### Open Prism
+### Install PRISM
 
-- **Windows:** double-click **Prism Control Center - Windows.cmd**.
-- **Mac:** double-click **Prism Control Center - Mac.command**.
+Download the file for your computer from the
+[Releases page](https://github.com/Bellefeu/Anki-LLM-Optimizer/releases/latest).
 
-#### If your Mac says Apple could not verify the file
+- **Windows:** `PRISM.exe`. Double-click it. Nothing else is required.
+- **Mac:** `PRISM-macOS-AppleSilicon.dmg`, or `PRISM-macOS-Intel.dmg` on a pre-2020 Mac.
+  Open it and drag **PRISM** into your Applications folder.
+- **Linux:** the `.deb` on Debian or Ubuntu, or the `.tar.gz` anywhere else. The tarball
+  has an `install.sh` that adds PRISM to your applications menu for your user only.
 
-This can appear the first time because the launcher came from GitHub and is not signed
-by an Apple Developer ID. Prism has not run yet.
+PRISM carries everything it needs, including its own Python. You do not install Python
+to run PRISM.
+
+The first time it opens it asks where your work should live and creates that folder for
+you. Everything after that happens inside the one window.
+
+#### If your Mac says PRISM cannot be opened
+
+This appears the first time because PRISM is not signed with a paid Apple Developer ID.
+PRISM has not run yet, and nothing is wrong with the file.
 
 1. Click **Done**. Do not click **Move to Trash**.
 2. Open the **Apple menu** at the top-left of your screen.
 3. Click **System Settings**, then **Privacy & Security**.
-4. Scroll down and click **Open Anyway** beside the blocked Prism launcher.
+4. Scroll down and click **Open Anyway** beside the blocked PRISM entry.
 5. Confirm, then click **Open**.
 
 You only need to approve this copy once. These are
 [Apple's current steps](https://support.apple.com/en-us/102445).
 
-The project root intentionally has only two launchers. Setup scripts and templates live
-inside `control_center/`, so a new user never has to guess which technical file to run.
-Your browser opens a local page named **Prism**. Keep the small terminal window open while
-you use it. Prism runs only on your computer; it does not upload your decks to a website.
-If Python is missing, the launcher opens the guided installer first; open Prism again
-after setup finishes.
+#### If Windows shows a blue "Windows protected your PC" box
+
+Same reason: no paid code-signing certificate. Click **More info**, then **Run anyway**.
+
+### Opening PRISM from a folder you cloned
+
+If you downloaded the repository instead of the application, the project root still holds
+two launchers, and they open the same dashboard in your browser:
+
+- **Windows:** double-click **PRISM - Windows.cmd**.
+- **Mac:** double-click **PRISM - Mac.command**.
+
+That path needs Python 3.10 or newer on your computer. If Python is missing, the launcher
+opens the guided installer first; open PRISM again after setup finishes. Keep the small
+terminal window open while you use it. Either way PRISM runs only on your computer and
+never uploads your decks to a website.
 
 ---
 
 ## PART 1: KEEP THE TOOLKIT UPDATED
 
-Make this your first stop whenever you return to the project. Open **Update** in Prism and
+Make this your first stop whenever you return to the project. Open **Update** in PRISM and
 click **Check for updates**. If a stable update is ready, click **Install update**. If you
 just downloaded the project, the check simply confirms that you are current.
 
@@ -60,22 +82,23 @@ The updater:
 It uses the latest stable GitHub **Release**. It does not run `git pull`, and it does not
 require you to understand Git.
 
-### Updating an older copy that does not have Prism
+### Bringing an older project folder into PRISM
 
 Do this once. Do not merge a fresh download into your real project by hand.
 
 1. Keep your old project folder exactly where it is.
-2. Download the newest repo ZIP from GitHub and extract it somewhere else, such as
-   Downloads. This temporary copy is only a helper.
-3. Open Prism from the temporary copy.
-4. Click **Choose folder** and choose your **old project folder**, the one with your real
-   decks and progress.
-5. Open **Update**, click **Check for updates**, then **Install update**.
-6. Close the helper and use Prism inside your old project from now on. You may delete the
-   temporary downloaded copy.
+2. Install PRISM using the steps above.
+3. On the first screen choose **Open an existing folder**, or use **Choose folder** at the
+   top of the window, and select your **old project folder**, the one with your real decks
+   and progress.
+4. Open **Update**, click **Check for updates**, then **Install update**.
 
-Prism treats the old folder as a legacy install: it backs up every toolkit file it will
+PRISM treats the old folder as a legacy install: it backs up every toolkit file it will
 replace, preserves runtime state and study files, then tests the installed update.
+
+If any toolkit file was lost along the way, **Update** also has **Check the toolkit**,
+which compares the folder against the copy carried inside PRISM. It puts back what is
+missing and reports, without touching, anything you edited yourself.
 
 ---
 
@@ -105,11 +128,11 @@ An unhydrated folder reads as **empty**, not as an error. That can look exactly 
 
 ### 2. Run the guided installer
 
-Open **Update** in Prism and click **Open guided setup**. Follow the words in the terminal.
+Open **Update** in PRISM and click **Open guided setup**. Follow the words in the terminal.
 The installer finds Python, Poppler, Tesseract, and Node, installs only what is missing,
 then runs the checks.
 
-If Prism cannot open yet, open a terminal in the project folder and run the command for
+If PRISM cannot open yet, open a terminal in the project folder and run the command for
 your operating system.
 
 macOS or Linux:
@@ -150,7 +173,7 @@ python3 scripts/bootstrap.py
 
 ### 4. Set your preferences
 
-Open **Prefs** in Prism. The left editor is your profile: how aggressively to fix errors,
+Open **Prefs** in PRISM. The left editor is your profile: how aggressively to fix errors,
 whether to preserve Anki review history, and how thorough the work should be. The right
 editor is for your own prompt add-ons. Put universal preferences under **Every run**, or
 add notes for Build, Verify, Auto, or the final duplicate check. Click **Save preferences**.
@@ -184,8 +207,8 @@ offers it; otherwise use the strongest Codex model available. Official help:
 
 Two destinations, one shared module name.
 
-**Easy way:** open **Home** in Prism, type the module name, then drop source files and an
-`.apkg` deck into the two large boxes. Prism renames the deck to match and asks before
+**Easy way:** open **Home** in PRISM, type the module name, then drop source files and an
+`.apkg` deck into the two large boxes. PRISM renames the deck to match and asks before
 replacing a staged file. You may stage as many modules as you like.
 
 You may also use either input by itself:
@@ -330,11 +353,11 @@ writes a report, and stops at the human decision.
 
 ## PART 5: REVIEW AND CORRECT
 
-Open **Decks** in Prism and choose **Needs review**. Select a deck, open its NOTES or
+Open **Decks** in PRISM and choose **Needs review**. Select a deck, open its NOTES or
 verification report, and read every **JUDGEMENT CALL**. This is the deliberate human gate
 against losing important information.
 
-The selected deck has a decision workspace directly beneath its judgement calls. Prism
+The selected deck has a decision workspace directly beneath its judgement calls. PRISM
 inserts the exact deck name in every prompt, so there is no manual renaming.
 
 If clinical accuracy matters and you plan to run the deeper check in Part 6, do that
@@ -354,7 +377,7 @@ and reclaims its completed scratch.
 
 ### If you disagree
 
-Do not pass. In the same deck workspace, type exactly what should change. Prism appends
+Do not pass. In the same deck workspace, type exactly what should change. PRISM appends
 the patch instruction and module name, previews the finished prompt, and copies it as one
 message:
 
@@ -370,7 +393,7 @@ are satisfied, then use the approval prompt.
 ## PART 6: RUN AN OPTIONAL DEEP QUALITY CHECK
 
 Do this **before final approval** whenever clinical accuracy matters. In a fresh session,
-choose the prompt that matches how the deck started. Prism fills every `<module>` using
+choose the prompt that matches how the deck started. PRISM fills every `<module>` using
 the deck selector above its prompt library.
 
 ### Compare an original deck with the rebuild
@@ -435,7 +458,7 @@ separate final step.
 
 ## WHAT THE PIPELINE IS DOING
 
-Your captures may be images, so Prism extracts text with OCR. It reads pixels only where
+Your captures may be images, so PRISM extracts text with OCR. It reads pixels only where
 OCR is unreliable: figures, low-confidence words, and every line containing a number.
 The coverage gate proves every meaningful pixel is either inside a high-confidence word
 or on the visual-read list; an unprovable page is handed over whole. A fourteen-rule
@@ -456,7 +479,7 @@ and the finished deck is checked against itself for contradictions.
 | A tool is missing right after setup | Open a new terminal and re-run setup. |
 | PowerShell blocks the installer | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once. |
 | macOS blocks the launcher | Click **Done**, then **Privacy & Security → Open Anyway**. |
-| A dependency or readiness check fails | Open Prism and click **Open guided setup** again. |
+| A dependency or readiness check fails | Open PRISM and click **Open guided setup** again. |
 | Anything else | Copy the exact error into a fresh desktop-agent session in this project. Do not work around a safety stop. |
 
 **Read more in this order:**

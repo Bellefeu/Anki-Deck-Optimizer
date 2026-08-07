@@ -1,0 +1,57 @@
+name: Tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: ${{ matrix.os }}, Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # No pip install. Everything under test is standard library only, and
+      # proving that on a bare interpreter is part of what the suite is for.
+      - name: Dashboard, workspace and packaging tests
+        run: python -m unittest control_center.test_control_center packaging.test_packaging --verbose
+
+      - name: Pipeline self-tests
+        run: python scripts/selftest.py
+
+      - name: Manifest matches the working tree
+        shell: bash
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path[:0] = ["control_center", "scripts"]
+          import workspace as ws
+          report = ws.verify_payload(".")
+          if report["missing"] or report["altered"]:
+              print("scripts/UPDATE_MANIFEST.json is stale.")
+              for kind in ("missing", "altered"):
+                  for name in report[kind]:
+                      print(f"  {kind}: {name}")
+              print("\nRebuild it with:")
+              print(f"  python3 control_center/build_manifest.py {ws.APP_VERSION}")
+              raise SystemExit(1)
+          print(f"Manifest clean: {len(ws.payload_files('.'))} publisher files.")
+          PY

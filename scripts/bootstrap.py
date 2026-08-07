@@ -212,8 +212,8 @@ def main():
     print("""  Next:
 
     1. Return to the Prism Control Center. If it is not open, double-click:
-         Windows: Prism Control Center - Windows.cmd
-         Mac:     Prism Control Center - Mac.command
+         Windows: PRISM - Windows.cmd
+         Mac:     PRISM - Mac.command
     2. Open Prefs, read your profile, and click Save preferences.
     3. Open Home, enter a module name, and drop in source files and/or an .apkg.
     4. Follow START HERE.md to run the pipeline with your agent.

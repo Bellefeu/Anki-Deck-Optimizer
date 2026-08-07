@@ -27,13 +27,14 @@ sys.path.insert(0, str(ROOT / "control_center"))
 import app
 import state_io
 import updater
+import workspace
 
 
 def copy_project(destination):
     shutil.copytree(
         ROOT, destination, dirs_exist_ok=True,
         ignore=shutil.ignore_patterns(
-            ".git", "__pycache__", ".pipeline_backups",
+            ".git", "__pycache__", ".pipeline_backups", "build", "dist",
             "anki_pipeline_selftest_*", "anki_optimizer_update_*",
             "selftest_*", "cov_*", "tmp*",
         ),
@@ -119,8 +120,8 @@ class PackagingTests(unittest.TestCase):
     def test_root_has_only_the_beginner_facing_launchers_and_start_guide(self):
         expected = (
             "START HERE.md",
-            "Prism Control Center - Mac.command",
-            "Prism Control Center - Windows.cmd",
+            "PRISM - Mac.command",
+            "PRISM - Windows.cmd",
         )
         for relative in expected:
             with self.subTest(relative=relative):
@@ -129,11 +130,13 @@ class PackagingTests(unittest.TestCase):
             "START_HERE.md", "OPEN_CONTROL_CENTER.command",
             "OPEN_CONTROL_CENTER.cmd", "open_control_center.sh",
             "setup.sh", "setup.ps1", "PROFILE.template.md",
+            "Prism Control Center - Mac.command",
+            "Prism Control Center - Windows.cmd",
         ):
             with self.subTest(retired=retired):
                 self.assertFalse((ROOT / retired).exists())
         if os.name != "nt":
-            self.assertTrue(os.access(ROOT / "Prism Control Center - Mac.command", os.X_OK))
+            self.assertTrue(os.access(ROOT / "PRISM - Mac.command", os.X_OK))
             self.assertTrue(os.access(ROOT / "control_center/launch.sh", os.X_OK))
             self.assertTrue(os.access(ROOT / "control_center/install/setup.sh", os.X_OK))
 
@@ -226,9 +229,9 @@ class PackagingTests(unittest.TestCase):
         # Home is bare text on the void below the fold, so it must recede
         # further than the views whose content sits on filled surfaces.
         recessions = dict(re.findall(r"(\w+): \{body:.*?recede: ([\d.]+)\}", script))
-        self.assertEqual(len(recessions), 5, f"expected a recession per view, got {recessions}")
+        self.assertEqual(len(recessions), 6, f"expected a recession per view, got {recessions}")
         self.assertEqual(float(recessions["home"]), 1.0)
-        for view in ("guide", "decks", "preferences", "updates"):
+        for view in ("welcome", "guide", "decks", "preferences", "updates"):
             with self.subTest(view=view):
                 self.assertLess(float(recessions[view]), 1.0)
 
@@ -241,11 +244,42 @@ class PackagingTests(unittest.TestCase):
             "control_center/static/app.css",
             "control_center/static/prism-field.js",
             "control_center/app.py",
+            "control_center/desktop.py",
+            "control_center/workspace.py",
         ):
             with self.subTest(relative=relative):
                 text = (ROOT / relative).read_text(encoding="utf-8")
                 self.assertNotIn("—", text)
                 self.assertNotIn("–", text)
+
+    def test_the_page_carries_the_placeholders_the_server_fills_in(self):
+        """The window tells the page which chrome it is living in, and the
+        page has to have somewhere to put that before it is any use."""
+        page = (ROOT / "control_center/static/index.html").read_text(encoding="utf-8")
+        self.assertIn('class="__BODY_CLASS__"', page)
+        self.assertIn('content="__APP_VERSION__"', page)
+        self.assertIn('content="__CONTROL_TOKEN__"', page)
+        self.assertIn("<title>PRISM</title>", page)
+        styles = (ROOT / "control_center/static/app.css").read_text(encoding="utf-8")
+        for rule in ("body.chrome-inset", "body.needs-workspace .app-shell"):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, styles)
+
+    def test_first_run_offers_both_ways_into_a_workspace(self):
+        page = (ROOT / "control_center/static/index.html").read_text(encoding="utf-8")
+        for hook in ('id="welcome"', 'id="welcome-create"', 'id="welcome-open"',
+                     'id="welcome-browse"', 'id="welcome-path"', 'id="welcome-recent"'):
+            with self.subTest(hook=hook):
+                self.assertIn(hook, page)
+        script = (ROOT / "control_center/static/app.js").read_text(encoding="utf-8")
+        self.assertIn("window.prismShell", script)
+        # The window drives the page through exactly these three, so a rename
+        # here has to be a deliberate one.
+        for member in ("showView(", "toast(", "refresh("):
+            with self.subTest(member=member):
+                self.assertIn(member, script)
+        self.assertIn('"/api/workspace/create"', script)
+        self.assertIn('"/api/workspace/open"', script)
 
     def test_guide_leads_with_updates_and_uses_contextual_module_tokens(self):
         guide = (ROOT / "START HERE.md").read_text(encoding="utf-8")
@@ -395,6 +429,85 @@ class HttpTests(unittest.TestCase):
                 self.assertTrue(result["ok"])
                 self.assertEqual(
                     (root / "Source Files/Cardiac Basics/lecture.txt").read_bytes(), payload)
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+    def test_without_a_workspace_the_api_says_so_instead_of_failing(self):
+        """A downloaded PRISM starts with no project at all. Every endpoint
+        that needs one has to refuse politely, and the two that do not, status
+        and workspace, have to keep answering so first run can be drawn."""
+        application = app.Application(None)
+        server = ThreadingHTTPServer(("127.0.0.1", 0), app.Handler)
+        server.application = application
+        server.verbose = False
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base = f"http://127.0.0.1:{server.server_address[1]}"
+
+        def get(path):
+            request = urllib.request.Request(
+                base + path, headers={"X-Control-Token": application.token})
+            return json.load(urllib.request.urlopen(request, timeout=5))
+
+        try:
+            status = get("/api/status")
+            self.assertFalse(status["ready"])
+            self.assertEqual(status["project"], "")
+            self.assertEqual(status["pipeline"]["modules"], 0)
+            self.assertEqual(status["app_version"], workspace.APP_VERSION)
+
+            options = get("/api/workspace")
+            self.assertFalse(options["ready"])
+            self.assertTrue(options["suggested"])
+            self.assertTrue(options["can_create"], "the checkout is its own payload")
+
+            for path in ("/api/decks", "/api/guide", "/api/preferences"):
+                with self.subTest(path=path):
+                    with self.assertRaises(urllib.error.HTTPError) as refused:
+                        get(path)
+                    self.assertEqual(refused.exception.code, 400)
+                    detail = json.loads(refused.exception.read())
+                    self.assertIn("workspace", detail["error"].lower())
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
+
+    def test_a_request_addressed_to_another_name_is_refused(self):
+        """The socket is on the loopback interface, but a page elsewhere can
+        still aim a browser at a name that resolves to it. The token would
+        stop the write; this stops the request reaching a handler at all."""
+        with tempfile.TemporaryDirectory(dir=ROOT.parent) as temp:
+            root = make_used_fixture(temp, "origin-project")
+            application = app.Application(root)
+            server = ThreadingHTTPServer(("127.0.0.1", 0), app.Handler)
+            server.application = application
+            server.verbose = False
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            base = f"http://127.0.0.1:{server.server_address[1]}"
+            try:
+                for headers in (
+                    {"Host": "prism.example.com"},
+                    {"Origin": "https://prism.example.com"},
+                ):
+                    with self.subTest(headers=headers):
+                        request = urllib.request.Request(
+                            base + "/api/status",
+                            headers={"X-Control-Token": application.token, **headers},
+                        )
+                        with self.assertRaises(urllib.error.HTTPError) as refused:
+                            urllib.request.urlopen(request, timeout=5)
+                        self.assertEqual(refused.exception.code, 403)
+
+                allowed = urllib.request.Request(
+                    base + "/api/status",
+                    headers={"X-Control-Token": application.token,
+                             "Origin": f"http://localhost:{server.server_address[1]}"},
+                )
+                self.assertTrue(json.load(urllib.request.urlopen(allowed, timeout=5))["ok"])
             finally:
                 server.shutdown()
                 server.server_close()

@@ -11,12 +11,20 @@ It is meant to be driven by an AI agent. You hand the agent a prompt file; the s
 do everything that must be deterministic — database surgery, validation gates, the audit
 trail — and the agent does the editorial judgement the scripts cannot.
 
-**Easiest:** double-click `Prism Control Center - Windows.cmd` on Windows or
-`Prism Control Center - Mac.command` on macOS. The local Prism dashboard displays the
-complete Start Here guide with deck-aware copyable prompts and handles setup, staging,
-preferences, deck review, and safe updates. Select a completed deck once and Prism fills
-its exact name into approval, correction, verification, and grading prompts. If macOS blocks the first launch,
-follow the five picture-free steps at the top of [`START HERE.md`](START%20HERE.md).
+**Easiest:** install **PRISM**, the desktop application, from the
+[latest release](https://github.com/Bellefeu/Anki-LLM-Optimizer/releases/latest):
+`PRISM.exe` on Windows, a `.dmg` on macOS, a `.deb` or `.tar.gz` on Linux. It carries its
+own Python and the whole toolkit, so the first launch just asks where your work should
+live and builds that folder for you.
+
+PRISM displays the complete Start Here guide with deck-aware copyable prompts and handles
+setup, staging, preferences, deck review, and safe updates. Select a completed deck once
+and PRISM fills its exact name into approval, correction, verification, and grading
+prompts. If macOS or Windows blocks the first launch, follow the picture-free steps at the
+top of [`START HERE.md`](START%20HERE.md).
+
+Working from a clone instead? `PRISM - Windows.cmd` and `PRISM - Mac.command` open the same
+dashboard in your browser and need Python 3.10+ on your machine.
 
 **Impatient in a terminal?** `python3 scripts/bootstrap.py`
 
@@ -53,7 +61,7 @@ Then hand your agent `scripts/PROMPT_build.md`.
 ## Layout
 
 ```
-Prism Control Center - *   local dashboard launchers; no terminal knowledge needed
+PRISM - *                  browser launchers for a clone; no terminal knowledge needed
 START HERE.md              stepwise walkthrough. Start with this.
 PROFILE.md                 your private runtime preferences (made by setup)
 Source Files/              input: one folder of captures per module
@@ -71,7 +79,8 @@ scripts/
   PROMPT_dedupe.md         cross-deck duplicate hunting
   bootstrap.py             run this first
   selftest.py              isolated safety checks. Run in any new environment.
-control_center/            Prism dashboard, installer, templates, and safe patcher
+control_center/            PRISM dashboard, window shell, installer, and safe patcher
+packaging/                 how PRISM.exe and its siblings are built
 ```
 
 ## The four things that will save you a day each

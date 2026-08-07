@@ -18,8 +18,8 @@
 !README.md
 !START HERE.md
 !LICENSE
-!Prism Control Center - Mac.command
-!Prism Control Center - Windows.cmd
+!PRISM - Mac.command
+!PRISM - Windows.cmd
 !scripts/
 !scripts/*.py
 !scripts/*.js
@@ -29,6 +29,16 @@
 !scripts/project_state.template.json
 !control_center/
 !control_center/**
+
+# --- how the application is built, and by what ---------------------------
+#  packaging/ is publisher build tooling only. It is deliberately outside
+#  scripts/UPDATE_MANIFEST.json, so it never lands in a user's workspace.
+!packaging/
+!packaging/*.py
+!packaging/*.txt
+!packaging/*.md
+!.github/
+!.github/**
 
 # --- folder skeleton, so a clone has the right shape ---------------------
 !Source Files/
@@ -63,6 +73,18 @@ scripts/__pycache__/
 .pipeline_backups/
 *.pyc
 .DS_Store
+
+# Build output. Generated icons, the staged payload, the frozen application
+# and every installer are products, never sources.
+build/
+dist/
+*.spec
+*.icns
+*.ico
+*.dmg
+*.exe
+*.deb
+*.AppImage
 
 # Runtime JSON (including project_state.json and real audit records) stays out.
 # Only publisher-owned templates/manifests are added back above.

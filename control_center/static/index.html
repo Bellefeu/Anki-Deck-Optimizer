@@ -4,16 +4,58 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="control-token" content="__CONTROL_TOKEN__">
-  <title>Prism · Control Center</title>
+  <meta name="app-version" content="__APP_VERSION__">
+  <title>PRISM</title>
   <link rel="stylesheet" href="/static/app.css">
 </head>
-<body>
+<body class="__BODY_CLASS__">
   <canvas id="prism-field" class="field" aria-hidden="true"></canvas>
   <div class="veil" aria-hidden="true"></div>
 
+  <div class="welcome" id="welcome" hidden>
+    <div class="welcome-inner">
+      <div class="welcome-mark" aria-hidden="true">
+        <svg viewBox="0 0 44 44" fill="none">
+          <path class="mark-rulings" d="M35.5 7.5L15.78 39.69M34.95 8.51L12.65 39.1M33.36 9.45L10.29 38.29M30.84 10.22L8.87 37.34M27.61 10.77L8.52 36.32M23.92 11.06L9.26 35.31M20.08 11.06L11.03 34.4M16.39 10.77L13.69 33.66M13.16 10.22L17.02 33.15M10.64 9.45L20.76 32.92M9.05 8.51L24.6 32.97M8.5 7.5L28.22 33.31M9.05 6.49L31.35 33.9M10.64 5.55L33.71 34.71M13.16 4.78L35.13 35.66M16.39 4.23L35.48 36.68M20.08 3.94L34.74 37.69M23.92 3.94L32.97 38.6M27.61 4.23L30.31 39.34M30.84 4.78L26.98 39.85M33.36 5.55L23.24 40.08M34.95 6.49L19.4 40.03"/>
+        </svg>
+      </div>
+      <span class="eyebrow" id="welcome-eyebrow">PRISM</span>
+      <h1>Choose where<br>your work will live.</h1>
+      <p class="lede">One folder holds every module, deck, audit record and preference. PRISM carries the toolkit inside it, so there is nothing to download first.</p>
+
+      <div class="welcome-choices">
+        <section class="welcome-choice">
+          <span class="eyebrow">START FRESH</span>
+          <h2>Create a workspace</h2>
+          <p>A new folder with the pipeline, the study folders and your starting preferences already in place.</p>
+          <label class="welcome-path">
+            <span>New workspace folder</span>
+            <input id="welcome-path" spellcheck="false" aria-label="Where the new workspace will be created">
+          </label>
+          <div class="welcome-actions">
+            <button class="primary-button" id="welcome-create">Create workspace</button>
+            <button class="quiet-button" id="welcome-browse">Choose a different place</button>
+          </div>
+        </section>
+
+        <section class="welcome-choice">
+          <span class="eyebrow">ALREADY HAVE ONE</span>
+          <h2>Open an existing folder</h2>
+          <p>Point PRISM at a project folder you downloaded or cloned before.</p>
+          <div class="welcome-recent" id="welcome-recent"></div>
+          <div class="welcome-actions">
+            <button class="quiet-button" id="welcome-open">Choose folder</button>
+          </div>
+        </section>
+      </div>
+
+      <p class="welcome-status" id="welcome-status" aria-live="polite"></p>
+    </div>
+  </div>
+
   <div class="app-shell">
     <aside class="rail" aria-label="Main navigation">
-      <div class="prism-mark" aria-label="Prism">
+      <div class="prism-mark" aria-label="PRISM">
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true">
           <path class="mark-rulings" d="M35.5 7.5L15.78 39.69M34.95 8.51L12.65 39.1M33.36 9.45L10.29 38.29M30.84 10.22L8.87 37.34M27.61 10.77L8.52 36.32M23.92 11.06L9.26 35.31M20.08 11.06L11.03 34.4M16.39 10.77L13.69 33.66M13.16 10.22L17.02 33.15M10.64 9.45L20.76 32.92M9.05 8.51L24.6 32.97M8.5 7.5L28.22 33.31M9.05 6.49L31.35 33.9M10.64 5.55L33.71 34.71M13.16 4.78L35.13 35.66M16.39 4.23L35.48 36.68M20.08 3.94L34.74 37.69M23.92 3.94L32.97 38.6M27.61 4.23L30.31 39.34M30.84 4.78L26.98 39.85M33.36 5.55L23.24 40.08M34.95 6.49L19.4 40.03"/>
         </svg>
@@ -50,13 +92,17 @@
           </span><span>Update</span>
         </button>
       </nav>
-      <div class="rail-foot"><span class="pulse"></span><span id="rail-version">loading</span></div>
+      <div class="rail-foot">
+        <span class="pulse"></span>
+        <span id="rail-version">loading</span>
+        <span id="rail-toolkit"></span>
+      </div>
     </aside>
 
     <main>
       <header class="topbar">
         <div class="project-copy">
-          <span class="eyebrow">ACTIVE PROJECT</span>
+          <span class="eyebrow">WORKSPACE</span>
           <div class="path-row">
             <input id="project-path" aria-label="Project folder path" spellcheck="false">
             <button id="apply-project" class="icon-button" title="Use this path" aria-label="Use this project path">
@@ -183,7 +229,7 @@
 
       <section class="view" id="view-decks">
         <div class="page-heading">
-          <div><span class="eyebrow">HUMAN CHECKPOINT</span><h1>Review. Decide. Continue.</h1><p>Select a deck once; Prism prepares the exact approval or correction prompt.</p></div>
+          <div><span class="eyebrow">HUMAN CHECKPOINT</span><h1>Review. Decide. Continue.</h1><p>Select a deck once; PRISM prepares the exact approval or correction prompt.</p></div>
           <div class="segmented" role="group" aria-label="Deck status filter">
             <button class="active" data-filter="all">All</button><button data-filter="review">Needs review</button><button data-filter="verified">Verified</button>
           </div>
@@ -248,7 +294,17 @@
             <h2>Let the installer handle it</h2>
             <p>Open the correct terminal in this project and install only what is missing.</p>
             <button id="run-setup" class="primary-button">Open guided setup</button>
-            <small>Passwords, if needed, are entered in the terminal, not in this dashboard.</small>
+            <small>PRISM itself needs none of this. These are the tools the build pipeline shells out to. Passwords, if any are needed, are typed in the terminal and never here.</small>
+          </section>
+          <section class="band integrity-card">
+            <span class="eyebrow">WORKSPACE FILES</span>
+            <h2 id="integrity-heading">Toolkit integrity</h2>
+            <p id="integrity-copy">Compare the toolkit files in this workspace against the copy carried inside PRISM. Anything you edited is reported and left alone.</p>
+            <div class="button-row">
+              <button id="check-integrity" class="quiet-button">Check the toolkit</button>
+              <button id="repair-integrity" class="quiet-button" disabled>Restore missing files</button>
+            </div>
+            <div class="integrity-detail" id="integrity-detail"></div>
           </section>
         </div>
         <section class="band job-card" id="job-card" hidden>
