@@ -577,21 +577,40 @@ class ToolLookupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             installed = Path(temp) / "bin"
             installed.mkdir()
-            tool = installed / "pdftotext"
-            tool.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-            tool.chmod(0o755)
+            # A name no machine could already carry, so what is proved below is
+            # the search and not whatever this runner happens to have installed.
+            # Windows will only run a file whose extension is in PATHEXT.
+            name = "prism-probe-tool"
+            if sys.platform == "win32":
+                tool = installed / f"{name}.bat"
+                tool.write_text("@echo off\r\n", encoding="utf-8")
+            else:
+                tool = installed / name
+                tool.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+                tool.chmod(0o755)
 
-            # The environment a Finder or Explorer launch actually hands over,
-            # with the shell that knows better silenced as well.
-            bare = {"PATH": os.pathsep.join(("/usr/bin", "/bin"))}
-            with mock.patch.dict(os.environ, bare, clear=True), \
+            # An inherited PATH holding nothing at all is the strongest form of
+            # what a Finder or Explorer launch hands over, and the only one that
+            # means the same thing on every platform. The shell and the registry
+            # that would know better are silenced too, so the answer can only
+            # come from the install directories PRISM knows to look in. PATH is
+            # replaced rather than the whole environment, because clearing it
+            # would take PATHEXT with it and Windows needs that to find the file.
+            inherited = Path(temp) / "empty"
+            inherited.mkdir()
+            with mock.patch.dict(os.environ, {"PATH": str(inherited)}), \
                  mock.patch.object(workspace, "_login_shell_path", return_value=[]), \
                  mock.patch.object(workspace, "_registry_path", return_value=[]), \
                  mock.patch.object(workspace, "_UNIX_TOOL_DIRS", (str(installed),)), \
                  mock.patch.object(workspace, "_UNIX_TOOL_GLOBS", ()), \
                  mock.patch.object(workspace, "_WINDOWS_TOOL_GLOBS", (str(installed),)):
-                self.assertIsNone(shutil.which("pdftotext"))
-                self.assertEqual(workspace.find_tool("pdftotext", refresh=True), str(tool))
+                self.assertIsNone(shutil.which(name))
+                found = workspace.find_tool(name, refresh=True)
+            # Compared as a file rather than as a string: Windows answers with
+            # the extension spelled the way PATHEXT spells it, not the way the
+            # file on disk does.
+            self.assertIsNotNone(found)
+            self.assertTrue(os.path.samefile(found, tool))
 
     def test_the_reported_health_uses_that_wider_search(self):
         """The four chips on the Home tab are the visible half of this. They
