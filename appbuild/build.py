@@ -64,9 +64,22 @@ ENTRY = ROOT / "control_center/desktop.py"
 # framework that macOS then wants signed; the window supplies the folder
 # picker, and the fallback path asks for a typed path instead.
 EXCLUDED = (
-    "tkinter", "test", "distutils", "lib2to3", "pydoc_data",
-    "numpy", "PIL", "matplotlib", "pytest", "setuptools", "pip",
+    "tkinter", "test", "lib2to3", "pydoc_data",
+    "numpy", "PIL", "matplotlib", "pytest", "pip",
 )
+
+# Excluding these does not trim the application, it stops PyInstaller.
+#
+# PyInstaller ships a pre-safe-import hook that aliases setuptools' vendored
+# copy of distutils onto the name "distutils". If distutils has already been
+# marked excluded when that hook runs, the alias raises outright and the whole
+# analysis dies. Excluding setuptools breaks the same hook from the other end,
+# by removing what the alias points at.
+#
+# Only Windows ever reached it, because pythonnet and clr_loader are the only
+# dependencies that drag setuptools into the graph, and they exist on no other
+# platform. A local macOS build cannot reproduce this.
+UNSAFE_TO_EXCLUDE = ("distutils", "setuptools")
 
 HIDDEN = {
     "common": ("app", "updater", "workspace", "state_io", "webview"),
