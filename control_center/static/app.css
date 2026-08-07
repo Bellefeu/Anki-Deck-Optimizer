@@ -1567,6 +1567,27 @@ body.chrome-inset .rail { padding-top: 64px; }
 body.chrome-inset main { padding-top: 54px; }
 body.chrome-inset .welcome-inner { padding-top: 46px; }
 
+/* The strip that makes that reserved space behave the way it looks. It is
+   held to the shallowest of the three insets above, so whatever the view, it
+   is only ever lying over the space those insets already cleared and can
+   never swallow a click meant for a control. The traffic lights are drawn by
+   the system above the page entirely and are not affected.
+
+   Zero height by default rather than hidden on the other platforms: the
+   element still has to exist when pywebview binds to it, which happens once,
+   on load. Windows and Linux keep a title bar of their own and reserve
+   nothing, so there is nothing for it to cover there. */
+.chrome-drag {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 0;
+  z-index: 30;
+  cursor: default;
+  -webkit-user-select: none;
+  user-select: none;
+}
+body.chrome-inset .chrome-drag { height: 46px; }
+
 /* ------------------------------------------------------------------ *
  * First run
  *

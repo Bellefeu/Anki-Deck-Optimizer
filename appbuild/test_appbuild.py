@@ -575,11 +575,20 @@ class IconTests(unittest.TestCase):
 
 class RecipeTests(unittest.TestCase):
     def test_the_entry_point_and_every_hidden_import_exists(self):
+        """Ours have to be in the tree. Everyone else's has to be installed by
+        the build, or the freeze silently leaves it out and the application
+        fails at whatever it needed the package for."""
         self.assertTrue(recipe.ENTRY.is_file())
+        requirements = (ROOT / "appbuild/requirements-build.txt").read_text(encoding="utf-8")
         for module in recipe.HIDDEN["common"]:
-            if module == "webview":
-                continue
             with self.subTest(module=module):
+                if module in recipe.THIRD_PARTY_HIDDEN:
+                    distribution = recipe.THIRD_PARTY_HIDDEN[module]
+                    self.assertRegex(
+                        requirements, rf"(?mi)^{re.escape(distribution)}\b",
+                        f"{module} is declared hidden but nothing installs {distribution}",
+                    )
+                    continue
                 found = (ROOT / "control_center" / f"{module}.py").is_file() \
                     or (ROOT / "scripts" / f"{module}.py").is_file()
                 self.assertTrue(found, f"{module} is declared but is not in the tree")

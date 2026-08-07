@@ -5,13 +5,16 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import io
 import json
 import os
 import re
 import shutil
+import ssl
 import sys
 import tempfile
 import threading
+import types
 import unittest
 import urllib.error
 import urllib.request
@@ -234,6 +237,37 @@ class PackagingTests(unittest.TestCase):
         for view in ("welcome", "guide", "decks", "preferences", "updates"):
             with self.subTest(view=view):
                 self.assertLess(float(recessions[view]), 1.0)
+
+    def test_the_reserved_top_strip_drags_the_window_and_covers_nothing(self):
+        """The macOS window runs under an invisible title bar. Only the top 28
+        points of the space reserved for it were ever draggable, so a drag
+        anywhere lower selected the text underneath instead of moving the
+        window. The strip that fixes it must not reach past the shallowest
+        inset, or it starts eating clicks meant for controls."""
+        page = (ROOT / "control_center/static/index.html").read_text(encoding="utf-8")
+        style = (ROOT / "control_center/static/app.css").read_text(encoding="utf-8")
+
+        # The class name is pywebview's, not ours. Renaming it silently stops
+        # the window from moving, with nothing else to notice.
+        self.assertIn("pywebview-drag-region", page)
+        self.assertRegex(page, r'class="chrome-drag pywebview-drag-region"[^>]*aria-hidden')
+
+        self.assertRegex(style, r"\.chrome-drag\s*\{[^}]*height:\s*0")
+        inset = re.search(r"body\.chrome-inset \.chrome-drag \{[^}]*height: (\d+)px", style)
+        self.assertIsNotNone(inset, "the strip is never given a height on macOS")
+        strip = int(inset.group(1))
+        self.assertGreater(strip, 28, "no deeper than the title bar leaves it no better")
+
+        reserved = [int(value) for value in re.findall(
+            r"body\.chrome-inset (?:\.rail|main|\.welcome-inner) \{ padding-top: (\d+)px", style)]
+        self.assertEqual(len(reserved), 3, f"expected three insets, found {reserved}")
+        self.assertLessEqual(strip, min(reserved),
+                             "the strip reaches past what an inset cleared for it")
+
+        # Above the page, below anything modal, or it covers a dialog.
+        depth = re.search(r"\.chrome-drag \{[^}]*z-index: (\d+)", style)
+        self.assertIsNotNone(depth)
+        self.assertLess(int(depth.group(1)), 60)
 
     def test_user_facing_surfaces_carry_no_em_or_en_dashes(self):
         for relative in (
@@ -643,6 +677,111 @@ class ToolLookupTests(unittest.TestCase):
             with mock.patch.object(workspace, "system_python", return_value=("", "")):
                 with self.assertRaises(updater.UpdateError):
                     updater._script_python()
+
+
+class NetworkTrustTests(unittest.TestCase):
+    """A build carries an interpreter that looks for certificate authorities
+    where they sat on the machine that froze it. On the computer that downloads
+    the application there is nothing there, the trust store comes up empty, and
+    every HTTPS call fails in a way that reads like GitHub being down."""
+
+    def test_an_empty_store_is_told_apart_from_a_populated_one(self):
+        self.assertTrue(workspace._needs_bundled_certificates(
+            ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)))
+        self.assertFalse(workspace._needs_bundled_certificates(
+            ssl.create_default_context()))
+
+    def test_an_ssl_module_that_cannot_answer_is_not_read_as_empty(self):
+        """Guessing "empty" from a missing method would push every machine onto
+        the bundled copy, including the ones with a root of their own."""
+        class Silent:
+            def cert_store_stats(self):
+                raise AttributeError("no such thing here")
+        self.assertFalse(workspace._needs_bundled_certificates(Silent()))
+
+    def test_the_context_always_verifies(self):
+        """The path this is on downloads and then installs a release. A build
+        that quietly stopped checking certificates would trade a visible
+        failure for an invisible one."""
+        context = workspace.ssl_context()
+        self.assertTrue(context.check_hostname)
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+
+    def test_a_populated_system_store_is_left_in_charge(self):
+        asked = []
+        original = ssl.create_default_context
+
+        def watched(**kwargs):
+            asked.append(kwargs)
+            return original(**kwargs)
+
+        with mock.patch.object(workspace.ssl, "create_default_context", watched):
+            workspace.ssl_context()
+        self.assertTrue(asked)
+        self.assertNotIn("cafile", asked[-1],
+                         "the machine's own certificates were overridden")
+
+    def test_an_empty_store_reaches_for_the_bundled_certificates(self):
+        empty = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        asked = []
+        bundle = types.ModuleType("certifi")
+        bundle.where = lambda: "/packaged/cacert.pem"
+
+        def hollow(**kwargs):
+            asked.append(kwargs)
+            return empty
+
+        with mock.patch.object(workspace.ssl, "create_default_context", hollow), \
+             mock.patch.dict(sys.modules, {"certifi": bundle}):
+            workspace.ssl_context()
+        self.assertEqual(asked[-1].get("cafile"), "/packaged/cacert.pem")
+
+    def test_a_checkout_without_certifi_still_gets_a_context(self):
+        """Setting the name to None in sys.modules is how an absent package is
+        simulated: the import raises rather than finding the real one."""
+        empty = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        with mock.patch.object(workspace.ssl, "create_default_context", return_value=empty), \
+             mock.patch.dict(sys.modules, {"certifi": None}):
+            self.assertIs(workspace.ssl_context(), empty)
+
+    def test_every_outbound_request_carries_a_verified_context(self):
+        """Repairing the release check and leaving the download unverified
+        would fix the visible half and keep the dangerous half."""
+        source = (ROOT / "control_center/updater.py").read_text(encoding="utf-8")
+        opens = [match.start() for match in re.finditer(r"urlopen\(", source)]
+        self.assertEqual(len(opens), 2, "a network call was added or removed")
+        for start in opens:
+            self.assertIn("context=ws.ssl_context()", source[start:start + 220])
+
+    def test_the_release_check_hands_that_context_to_urlopen(self):
+        seen = {}
+
+        class Answer:
+            def __enter__(self):
+                return io.BytesIO(b'{"tag_name": "v9.9.9"}')
+
+            def __exit__(self, *unused):
+                return False
+
+        def fake_urlopen(request, timeout=None, context=None):
+            seen["context"] = context
+            return Answer()
+
+        with mock.patch.object(updater.urllib.request, "urlopen", fake_urlopen):
+            payload = updater._request_json("https://example.invalid/releases")
+        self.assertEqual(payload["tag_name"], "v9.9.9")
+        self.assertIsNotNone(seen["context"])
+        self.assertTrue(seen["context"].check_hostname)
+
+    def test_a_certificate_failure_says_what_a_reader_can_do(self):
+        raw = ("<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify "
+               "failed: unable to get local issuer certificate (_ssl.c:1010)>")
+        readable = updater._readable(Exception(raw))
+        self.assertIn(raw, readable)
+        self.assertIn("root certificate", readable)
+        for dash in ("—", "–"):
+            self.assertNotIn(dash, readable)
+        self.assertEqual(updater._readable(Exception("timed out")), "timed out")
 
 
 class UpdateCheckTests(unittest.TestCase):

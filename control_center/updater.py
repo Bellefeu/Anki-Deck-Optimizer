@@ -72,20 +72,35 @@ def _emit(callback, message, *, step=None):
         callback(message, step=step)
 
 
+def _readable(exc):
+    """A network failure with the one hint that makes it actionable.
+
+    A bare CERTIFICATE_VERIFY_FAILED reads like GitHub is down. It usually is
+    not, so the message says what was actually not readable and who tends to
+    be holding the missing piece.
+    """
+    text = str(exc)
+    if "CERTIFICATE_VERIFY" not in text:
+        return text
+    return (f"{text}. The certificates this computer trusts could not be read. "
+            "If you are on a work or school network that inspects traffic, that "
+            "network's root certificate has to be installed here first.")
+
+
 def _request_json(url, timeout=20):
     req = urllib.request.Request(
         url,
         headers={"Accept": "application/vnd.github+json", "User-Agent": USER_AGENT},
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as response:
+        with urllib.request.urlopen(req, timeout=timeout, context=ws.ssl_context()) as response:
             return json.load(response)
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
             raise UpdateError("No published update release is available yet.") from exc
         raise UpdateError(f"GitHub returned HTTP {exc.code} while checking updates.") from exc
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-        raise UpdateError(f"Could not reach GitHub: {exc}") from exc
+        raise UpdateError(f"Could not reach GitHub: {_readable(exc)}") from exc
 
 
 def _version_tuple(value):
@@ -157,7 +172,8 @@ def check_latest(root):
 def _download(url, destination, callback=None):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
-        with urllib.request.urlopen(req, timeout=60) as response, open(destination, "wb") as out:
+        with urllib.request.urlopen(req, timeout=60, context=ws.ssl_context()) as response, \
+                open(destination, "wb") as out:
             total = int(response.headers.get("Content-Length") or 0)
             copied = 0
             while True:
@@ -169,7 +185,7 @@ def _download(url, destination, callback=None):
                 if total:
                     _emit(callback, f"Downloaded {copied / 1e6:.1f} of {total / 1e6:.1f} MB")
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise UpdateError(f"Update download failed: {exc}") from exc
+        raise UpdateError(f"Update download failed: {_readable(exc)}") from exc
 
 
 def _safe_extract(archive, destination):

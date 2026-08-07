@@ -9,6 +9,14 @@
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body class="__BODY_CLASS__">
+  <!-- On macOS the page runs underneath a title bar that has been made
+       invisible, and the real one only ever claimed the top 28 points of it.
+       The rest of the reserved space looked like chrome and behaved like
+       text, so a drag that started there selected a paragraph instead of
+       moving the window. This strip is what pywebview looks for by name when
+       it injects its own script, and it hands those drags to the window.
+       Everywhere else it has no height and never sees a click. -->
+  <div class="chrome-drag pywebview-drag-region" aria-hidden="true"></div>
   <canvas id="prism-field" class="field" aria-hidden="true"></canvas>
   <div class="veil" aria-hidden="true"></div>
 
