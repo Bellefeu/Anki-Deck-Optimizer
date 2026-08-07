@@ -685,11 +685,61 @@ class NetworkTrustTests(unittest.TestCase):
     the application there is nothing there, the trust store comes up empty, and
     every HTTPS call fails in a way that reads like GitHub being down."""
 
-    def test_an_empty_store_is_told_apart_from_a_populated_one(self):
-        self.assertTrue(workspace._needs_bundled_certificates(
-            ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)))
-        self.assertFalse(workspace._needs_bundled_certificates(
-            ssl.create_default_context()))
+    class Holding:
+        """A context that reports carrying ``count`` authorities."""
+
+        def __init__(self, count):
+            self.count = count
+
+        def cert_store_stats(self):
+            return {"x509": self.count, "crl": 0, "x509_ca": self.count}
+
+    def paths(self, cafile=None, capath=None):
+        """The two places OpenSSL was compiled to look, whatever this machine
+        actually has. Reading the real ones made these tests describe the
+        runner rather than the code, which is how the capath case got through."""
+        return mock.patch.object(
+            workspace.ssl, "get_default_verify_paths",
+            return_value=ssl.DefaultVerifyPaths(
+                cafile, capath, "SSL_CERT_FILE", cafile, "SSL_CERT_DIR", capath),
+        )
+
+    def test_a_context_holding_authorities_is_never_second_guessed(self):
+        with self.paths():
+            self.assertFalse(workspace._trust_store_is_empty(self.Holding(190)))
+
+    def test_a_directory_of_certificates_counts_even_when_nothing_is_loaded(self):
+        """Debian and its derivatives ship a capath, which OpenSSL reads one
+        certificate at a time and only when it wants one. The count stays at
+        zero on a machine that is completely fine, and reading that as empty
+        would discard a root the administrator installed there."""
+        with tempfile.TemporaryDirectory() as temp:
+            store = Path(temp) / "certs"
+            store.mkdir()
+            (store / "ca-certificates.crt").write_text("not really a cert\n",
+                                                       encoding="utf-8")
+            with self.paths(capath=str(store)):
+                self.assertFalse(workspace._trust_store_is_empty(self.Holding(0)))
+            # The same directory with nothing in it verifies nothing.
+            (store / "ca-certificates.crt").unlink()
+            with self.paths(capath=str(store)):
+                self.assertTrue(workspace._trust_store_is_empty(self.Holding(0)))
+
+    def test_a_file_of_certificates_counts_when_it_is_really_there(self):
+        with tempfile.TemporaryDirectory() as temp:
+            bundle = Path(temp) / "cert.pem"
+            bundle.write_text("not really a cert\n", encoding="utf-8")
+            with self.paths(cafile=str(bundle)):
+                self.assertFalse(workspace._trust_store_is_empty(self.Holding(0)))
+            with self.paths(cafile=str(Path(temp) / "gone.pem")):
+                self.assertTrue(workspace._trust_store_is_empty(self.Holding(0)))
+
+    def test_the_build_machine_s_paths_are_what_empty_looks_like(self):
+        """What a downloaded application actually finds: both locations named,
+        neither one present, because they belonged to the build runner."""
+        with self.paths(cafile="/opt/runner/python/etc/cert.pem",
+                        capath="/opt/runner/python/etc/certs"):
+            self.assertTrue(workspace._trust_store_is_empty(self.Holding(0)))
 
     def test_an_ssl_module_that_cannot_answer_is_not_read_as_empty(self):
         """Guessing "empty" from a missing method would push every machine onto
@@ -697,7 +747,8 @@ class NetworkTrustTests(unittest.TestCase):
         class Silent:
             def cert_store_stats(self):
                 raise AttributeError("no such thing here")
-        self.assertFalse(workspace._needs_bundled_certificates(Silent()))
+        with self.paths():
+            self.assertFalse(workspace._trust_store_is_empty(Silent()))
 
     def test_the_context_always_verifies(self):
         """The path this is on downloads and then installs a release. A build
@@ -707,7 +758,7 @@ class NetworkTrustTests(unittest.TestCase):
         self.assertTrue(context.check_hostname)
         self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
 
-    def test_a_populated_system_store_is_left_in_charge(self):
+    def test_a_machine_with_its_own_certificates_is_left_in_charge(self):
         asked = []
         original = ssl.create_default_context
 
@@ -715,10 +766,10 @@ class NetworkTrustTests(unittest.TestCase):
             asked.append(kwargs)
             return original(**kwargs)
 
-        with mock.patch.object(workspace.ssl, "create_default_context", watched):
+        with mock.patch.object(workspace, "_trust_store_is_empty", return_value=False), \
+             mock.patch.object(workspace.ssl, "create_default_context", watched):
             workspace.ssl_context()
-        self.assertTrue(asked)
-        self.assertNotIn("cafile", asked[-1],
+        self.assertEqual(asked, [{}],
                          "the machine's own certificates were overridden")
 
     def test_an_empty_store_reaches_for_the_bundled_certificates(self):
@@ -731,7 +782,8 @@ class NetworkTrustTests(unittest.TestCase):
             asked.append(kwargs)
             return empty
 
-        with mock.patch.object(workspace.ssl, "create_default_context", hollow), \
+        with self.paths(cafile="/opt/runner/etc/cert.pem"), \
+             mock.patch.object(workspace.ssl, "create_default_context", hollow), \
              mock.patch.dict(sys.modules, {"certifi": bundle}):
             workspace.ssl_context()
         self.assertEqual(asked[-1].get("cafile"), "/packaged/cacert.pem")
@@ -740,7 +792,8 @@ class NetworkTrustTests(unittest.TestCase):
         """Setting the name to None in sys.modules is how an absent package is
         simulated: the import raises rather than finding the real one."""
         empty = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        with mock.patch.object(workspace.ssl, "create_default_context", return_value=empty), \
+        with self.paths(cafile="/opt/runner/etc/cert.pem"), \
+             mock.patch.object(workspace.ssl, "create_default_context", return_value=empty), \
              mock.patch.dict(sys.modules, {"certifi": None}):
             self.assertIs(workspace.ssl_context(), empty)
 

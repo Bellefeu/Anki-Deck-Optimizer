@@ -358,13 +358,39 @@ def system_python(refresh=False):
 # system produced nothing at all.
 
 
-def _needs_bundled_certificates(context):
-    """True when this context trusts nobody, which is not a usable state."""
+def _trust_store_is_empty(context):
+    """True when nothing on this machine will verify a certificate.
+
+    Counting what the context holds is only half an answer, and taking it for
+    the whole one is wrong in a way that matters. Certificates arrive by two
+    routes. A cafile is read in full the moment the context is built, so a
+    count settles it. A capath, which is how Debian and everything descended
+    from it ship their authorities, is never read up front: OpenSSL goes to
+    the directory for one certificate at a time, by name, when it needs it.
+    The count on such a machine is zero and the machine is perfectly fine.
+
+    Reading that zero as an empty store would push a working Debian onto the
+    bundled copy, and on a machine whose administrator put a root into
+    /etc/ssl/certs it would throw that root away. That is the exact failure
+    this whole path exists to avoid, so the directory is looked at directly.
+    """
     try:
-        return not context.cert_store_stats()["x509_ca"]
+        if context.cert_store_stats()["x509_ca"]:
+            return False
     except (AttributeError, KeyError, TypeError, ValueError):
         # An ssl module that cannot answer is not evidence of an empty store.
         return False
+    paths = ssl.get_default_verify_paths()
+    if paths.cafile and os.path.isfile(paths.cafile):
+        return False
+    try:
+        if paths.capath and os.listdir(paths.capath):
+            return False
+    except OSError:
+        # No such directory, or no permission to look. Either way, nothing
+        # here is going to verify anything.
+        pass
+    return True
 
 
 def ssl_context():
@@ -375,7 +401,7 @@ def ssl_context():
     is the code path that downloads and then installs a release.
     """
     context = ssl.create_default_context()
-    if not _needs_bundled_certificates(context):
+    if not _trust_store_is_empty(context):
         return context
     try:
         import certifi
