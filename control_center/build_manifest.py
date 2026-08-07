@@ -14,7 +14,7 @@ OUTPUT = ROOT / "scripts/UPDATE_MANIFEST.json"
 
 ROOT_FILES = {
     ".gitattributes", ".gitignore", "LICENSE", "README.md", "START HERE.md",
-    "Prism Control Center - Mac.command", "Prism Control Center - Windows.cmd",
+    "PRISM - Mac.command", "PRISM - Windows.cmd",
     "Source Files/README.md", "Anki Decks/README.md", "COMPLETED/README.md",
 }
 

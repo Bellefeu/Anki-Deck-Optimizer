@@ -1,0 +1,71 @@
+name: Tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: ${{ matrix.os }}, Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # The update tests prove a real update by running the staged copy's own
+      # self-test, which shells out to the pipeline toolchain. That is one apt
+      # line on Linux and a slow, flaky brew or choco install everywhere else,
+      # so Linux is where those tests actually run. On macOS and Windows they
+      # skip themselves and say so in the output rather than passing quietly.
+      - name: Pipeline toolchain
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr
+
+      # No pip step. Both suites are standard library only, and proving that
+      # on a bare interpreter is part of what they are for.
+      - name: Dashboard, workspace and application tests
+        run: python -m unittest control_center.test_control_center appbuild.test_appbuild --verbose
+
+      # selftest.py installs its own Python dependencies through scripts/deps.py
+      # and needs the toolchain above, so it runs where that toolchain is.
+      - name: Pipeline self-tests
+        if: runner.os == 'Linux'
+        run: python scripts/selftest.py
+
+      - name: Manifest matches the working tree
+        shell: bash
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path[:0] = ["control_center", "scripts"]
+          import workspace as ws
+          report = ws.verify_payload(".")
+          if report["missing"] or report["altered"]:
+              print("scripts/UPDATE_MANIFEST.json is stale.")
+              for kind in ("missing", "altered"):
+                  for name in report[kind]:
+                      print(f"  {kind}: {name}")
+              print("\nRebuild it with:")
+              print(f"  python3 control_center/build_manifest.py {ws.APP_VERSION}")
+              raise SystemExit(1)
+          print(f"Manifest clean: {len(ws.payload_files('.'))} publisher files.")
+          PY

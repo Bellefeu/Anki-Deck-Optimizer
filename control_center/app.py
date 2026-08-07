@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Local, browser-based control center for the Anki LLM Optimizer."""
+"""The local helper behind PRISM, the dashboard for the Anki LLM Optimizer.
+
+It serves the interface and the project API on the loopback interface only,
+with a random token on every request. ``desktop.py`` hosts it inside the
+application window; running this file directly opens it in a browser instead.
+"""
 
 from __future__ import annotations
 
@@ -21,15 +26,30 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 
-ROOT_FROM_FILE = Path(__file__).resolve().parents[1]
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import workspace as ws
+
+# In a checkout the payload is the checkout itself, so this is the repository
+# root either way; in a build it is the toolkit carried inside the app.
+ROOT_FROM_FILE = ws.payload_root()
 SCRIPTS = ROOT_FROM_FILE / "scripts"
-sys.path.insert(0, str(SCRIPTS))
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
 from state_io import atomic_write_bytes, load_state, summary as state_summary
 
 from updater import UpdateError, check_latest, current_version, install_update
 
 
-STATIC = Path(__file__).resolve().parent / "static"
+def _static_root():
+    if ws.frozen():
+        return ws.resource_root() / "control_center" / "static"
+    return Path(__file__).resolve().parent / "static"
+
+
+STATIC = _static_root()
+LOOPBACK_NAMES = {"127.0.0.1", "localhost", "::1", ""}
 SOURCE_EXTENSIONS = {
     ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tif", ".tiff",
     ".webp", ".txt", ".md", ".csv", ".rtf",
@@ -63,9 +83,7 @@ RESET_CONFIRMATION = "RESET TO DEFAULTS"
 
 
 def is_project(path):
-    path = Path(path)
-    return ((path / "scripts").is_dir()
-            and (path / "control_center/app.py").is_file())
+    return ws.is_workspace(path)
 
 
 def safe_child(root, candidate):
@@ -288,14 +306,47 @@ class Jobs:
             return json.loads(json.dumps(value)) if value else None
 
 
+EMPTY_PIPELINE = {"modules": 0, "verified": 0, "built_unverified": 0,
+                  "in_progress": 0, "run_count": 0, "statuses": {}}
+
+NO_WORKSPACE = ("No workspace is open yet. Create one or open an existing "
+                "folder first.")
+
+
 class Application:
-    def __init__(self, root):
+    def __init__(self, root, shell=None):
         self._lock = threading.Lock()
-        self.root = Path(root).resolve()
-        if not is_project(self.root):
-            raise ValueError(f"Not an Anki Optimizer project: {self.root}")
+        self.root = None
+        if root is not None:
+            resolved = Path(root).resolve()
+            if not is_project(resolved):
+                raise ValueError(f"Not an Anki Optimizer project: {resolved}")
+            self.root = resolved
         self.token = secrets.token_urlsafe(32)
         self.jobs = Jobs()
+        self.shell = dict(shell or {})
+        self.shell.setdefault("mode", "browser")
+        self.shell.setdefault("chrome", "system")
+        self.shell.setdefault("platform", sys.platform)
+        self.shell.setdefault("app_version", ws.APP_VERSION)
+        # Filled in by start_server; the window needs the address to load.
+        self.host = "127.0.0.1"
+        self.port = 0
+        # Set by desktop.py so the page can drive the window it lives in.
+        self.shell_actions = None
+
+    @property
+    def url(self):
+        return f"http://{self.host}:{self.port}/"
+
+    def require_root(self):
+        root = self.root
+        if root is None:
+            raise ValueError(NO_WORKSPACE)
+        return root
+
+    def toolkit_version(self):
+        return current_version(self.require_root())
 
     def set_root(self, path):
         if not path:
@@ -305,33 +356,54 @@ class Application:
             raise ValueError("That folder is not an Anki LLM Optimizer project.")
         with self._lock:
             self.root = path
+        ws.remember_workspace(path)
         return path
 
     def staging_directory(self, kind, module=""):
+        root = self.require_root()
         if kind == "source":
-            target = self.root / "Source Files"
+            target = root / "Source Files"
             if str(module or "").strip():
                 target /= clean_module_name(module)
         elif kind == "deck":
-            target = self.root / "Anki Decks"
+            target = root / "Anki Decks"
         else:
             raise ValueError("Choose either the source or deck destination.")
-        target = safe_child(self.root, target)
+        target = safe_child(root, target)
         target.mkdir(parents=True, exist_ok=True)
         return target
 
+    def machine_health(self):
+        """What the build pipeline needs, which is separate from what PRISM
+        itself needs. PRISM carries its own runtime; these are the tools the
+        scripts shell out to once a module is actually being built."""
+        return {
+            "python": sys.version.split()[0] if not ws.frozen() else _system_python(),
+            "poppler": bool(shutil.which("pdftotext")),
+            "tesseract": bool(shutil.which("tesseract")),
+            "node": bool(shutil.which("node")),
+        }
+
     def status(self):
         root = self.root
+        base = {
+            "ready": root is not None,
+            "app_version": ws.APP_VERSION,
+            "shell": dict(self.shell),
+            "health": self.machine_health(),
+        }
+        if root is None:
+            base.update({"project": "", "version": "", "pipeline": dict(EMPTY_PIPELINE),
+                         "staged": {"source_modules": 0, "decks": 0}})
+            return base
         state_path = root / "scripts/project_state.json"
         if state_path.exists():
-            state = load_state(state_path)
-            pipeline = state_summary(state)
+            pipeline = state_summary(load_state(state_path))
         else:
-            pipeline = {"modules": 0, "verified": 0, "built_unverified": 0,
-                        "in_progress": 0, "run_count": 0, "statuses": {}}
+            pipeline = dict(EMPTY_PIPELINE)
         source = root / "Source Files"
         decks = root / "Anki Decks"
-        return {
+        base.update({
             "project": str(root),
             "version": current_version(root),
             "pipeline": pipeline,
@@ -339,25 +411,46 @@ class Application:
                 "source_modules": len([p for p in source.iterdir() if p.is_dir()]) if source.is_dir() else 0,
                 "decks": len(list(decks.glob("*.apkg"))) if decks.is_dir() else 0,
             },
-            "health": {
-                "python": sys.version.split()[0],
-                "poppler": bool(shutil.which("pdftotext")),
-                "tesseract": bool(shutil.which("tesseract")),
-                "node": bool(shutil.which("node")),
-            },
+        })
+        return base
+
+    def workspace_options(self):
+        """Everything the first run screen needs to offer a choice."""
+        recent, seen = [], set()
+        for stored in ws.load_settings()["recent"]:
+            resolved = str(Path(stored))
+            if resolved in seen or not ws.is_workspace(resolved):
+                continue
+            seen.add(resolved)
+            recent.append(resolved)
+        try:
+            toolkit = ws.toolkit_version()
+            available = True
+        except ws.WorkspaceError:
+            toolkit, available = "", False
+        return {
+            "ready": self.root is not None,
+            "workspace": str(self.root) if self.root else None,
+            "suggested": str(ws.suggested_workspace()),
+            "recent": recent[:6],
+            "can_create": available,
+            "toolkit": toolkit,
+            "app_version": ws.APP_VERSION,
+            "native_picker": self.shell.get("mode") == "desktop",
         }
 
     def allowed_open_path(self, candidate):
         if not candidate:
             raise ValueError("No file was selected.")
+        root = self.require_root()
         candidate = Path(candidate).resolve()
         try:
-            return safe_child(self.root, candidate)
+            return safe_child(root, candidate)
         except ValueError:
             # A completed folder may be configured outside the project. Only the
             # exact paths already shown in the deck review list may be opened.
             allowed = set()
-            for row in deck_rows(self.root):
+            for row in deck_rows(root):
                 for key in ("notes_path", "report_path", "folder_path"):
                     if row.get(key):
                         allowed.add(Path(row[key]).resolve())
@@ -366,8 +459,33 @@ class Application:
             return candidate
 
 
+def _system_python():
+    """The interpreter the pipeline scripts would run under, not PRISM's own.
+
+    A build carries a private interpreter that cannot pip install the packages
+    the pipeline needs, so reporting that version here would tell the user
+    their machine is ready when it is not.
+    """
+    for candidate in ("python3.13", "python3.12", "python3.11", "python3.10", "python3", "python"):
+        executable = shutil.which(candidate)
+        if not executable:
+            continue
+        try:
+            found = subprocess.run(
+                [executable, "-c", "import sys; print('%d.%d.%d' % sys.version_info[:3])"],
+                capture_output=True, text=True, timeout=6,
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        version = found.stdout.strip()
+        if found.returncode == 0 and re.fullmatch(r"3\.\d+\.\d+", version):
+            if tuple(int(part) for part in version.split(".")) >= (3, 10, 0):
+                return version
+    return ""
+
+
 class Handler(BaseHTTPRequestHandler):
-    server_version = "AnkiControlCenter/1"
+    server_version = "PRISM/1"
 
     @property
     def app(self):
@@ -394,9 +512,39 @@ class Handler(BaseHTTPRequestHandler):
 
     def _require_token(self):
         if not self._authorized():
-            self._error("This request did not come from the local Control Center.", 403)
+            self._error("This request did not come from PRISM on this computer.", 403)
             return False
         return True
+
+    def _loopback_only(self):
+        """Refuse anything addressed to a name that is not this machine.
+
+        The socket already listens on 127.0.0.1, but a page on another site
+        can still point a browser at a hostname that resolves there. Checking
+        the names in the request closes that off before any handler runs.
+        """
+        host = (self.headers.get("Host") or "").rsplit(":", 1)[0].strip().strip("[]").lower()
+        if host not in LOOPBACK_NAMES:
+            return False
+        origin = self.headers.get("Origin")
+        if origin and origin != "null":
+            hostname = (urllib.parse.urlparse(origin).hostname or "").lower()
+            if hostname not in LOOPBACK_NAMES:
+                return False
+        return True
+
+    def _page(self):
+        page = (STATIC / "index.html").read_text(encoding="utf-8")
+        shell = self.app.shell
+        classes = " ".join((
+            f"shell-{shell.get('mode', 'browser')}",
+            f"chrome-{shell.get('chrome', 'system')}",
+            f"platform-{shell.get('platform', sys.platform)}",
+        ))
+        return (page
+                .replace("__CONTROL_TOKEN__", self.app.token)
+                .replace("__BODY_CLASS__", classes)
+                .replace("__APP_VERSION__", ws.APP_VERSION))
 
     def _read_json(self, limit=1024 * 1024):
         length = int(self.headers.get("Content-Length") or 0)
@@ -407,10 +555,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
+        if not self._loopback_only():
+            self._error("PRISM only answers requests addressed to this computer.", 403)
+            return
         if parsed.path == "/":
-            page = (STATIC / "index.html").read_text(encoding="utf-8")
-            page = page.replace("__CONTROL_TOKEN__", self.app.token)
-            payload = page.encode("utf-8")
+            payload = self._page().encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(payload)))
@@ -440,8 +589,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if parsed.path == "/api/status":
                 self._json({"ok": True, **self.app.status()})
+            elif parsed.path == "/api/workspace":
+                self._json({"ok": True, **self.app.workspace_options()})
             elif parsed.path == "/api/guide":
-                guide = self.app.root / "START HERE.md"
+                guide = self.app.require_root() / "START HERE.md"
                 if not guide.is_file():
                     raise RuntimeError("START HERE.md is missing. Run an update first.")
                 self._json({
@@ -450,9 +601,9 @@ class Handler(BaseHTTPRequestHandler):
                     "markdown": guide.read_text(encoding="utf-8"),
                 })
             elif parsed.path == "/api/decks":
-                self._json({"ok": True, "decks": deck_rows(self.app.root)})
+                self._json({"ok": True, "decks": deck_rows(self.app.require_root())})
             elif parsed.path == "/api/preferences":
-                root = self.app.root
+                root = self.app.require_root()
                 profile = root / "PROFILE.md"
                 default_profile, default_prompts = preference_defaults(root)
                 if not profile.exists():
@@ -469,11 +620,16 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": bool(job), "job": job}, 200 if job else 404)
             else:
                 self.send_error(404)
+        except (ValueError, UpdateError) as exc:
+            self._error(exc, 400)
         except Exception as exc:
             self._error(exc, 500)
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
+        if not self._loopback_only():
+            self._error("PRISM only answers requests addressed to this computer.", 403)
+            return
         if not self._require_token():
             return
         try:
@@ -485,10 +641,17 @@ class Handler(BaseHTTPRequestHandler):
                 selected = self._native_folder_dialog()
                 if selected:
                     self.app.set_root(selected)
-                self._json({"ok": True, "project": str(self.app.root), "changed": bool(selected)})
+                self._json({"ok": True, "project": str(self.app.root or ""),
+                            "changed": bool(selected)})
+            elif parsed.path.startswith("/api/workspace/"):
+                self._workspace_action(parsed.path.rsplit("/", 1)[-1])
+            elif parsed.path == "/api/shell/focus":
+                actions = self.app.shell_actions
+                raised = bool(actions and actions.focus())
+                self._json({"ok": True, "focused": raised})
             elif parsed.path == "/api/preferences":
                 data = self._read_json(limit=2 * 1024 * 1024)
-                root = self.app.root
+                root = self.app.require_root()
                 profile = str(data.get("profile", ""))
                 prompts = str(data.get("prompts", ""))
                 if len(profile) > 500_000 or len(prompts) > 500_000:
@@ -500,7 +663,7 @@ class Handler(BaseHTTPRequestHandler):
                 data = self._read_json()
                 if data.get("confirmation") != RESET_CONFIRMATION:
                     raise ValueError("The preference reset was not fully confirmed.")
-                root = self.app.root
+                root = self.app.require_root()
                 profile, prompts = preference_defaults(root)
                 atomic_write_bytes(root / "PROFILE.md", profile.encode("utf-8"), backup=True)
                 atomic_write_bytes(root / "USER_PROMPTS.md", prompts.encode("utf-8"), backup=True)
@@ -523,15 +686,15 @@ class Handler(BaseHTTPRequestHandler):
                 open_native(candidate)
                 self._json({"ok": True})
             elif parsed.path == "/api/setup":
-                message = launch_setup(self.app.root)
+                message = launch_setup(self.app.require_root())
                 self._json({"ok": True, "message": message})
             elif parsed.path == "/api/update/check":
-                root = self.app.root
+                root = self.app.require_root()
                 job_id = self.app.jobs.start("Check for updates", lambda log: self._check_job(root, log))
                 self._json({"ok": True, "job_id": job_id}, 202)
             elif parsed.path == "/api/update/install":
                 data = self._read_json()
-                root = self.app.root
+                root = self.app.require_root()
                 allow = bool(data.get("allow_incomplete"))
                 job_id = self.app.jobs.start(
                     "Install update",
@@ -540,16 +703,62 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"ok": True, "job_id": job_id}, 202)
             else:
                 self.send_error(404)
-        except (ValueError, UpdateError, json.JSONDecodeError) as exc:
+        except (ValueError, UpdateError, ws.WorkspaceError, json.JSONDecodeError) as exc:
             self._error(exc, 400)
         except Exception as exc:
             self._error(exc, 500)
+
+    def _workspace_action(self, action):
+        data = self._read_json()
+        if action == "open":
+            selected = self.app.set_root(data.get("path"))
+            self._json({"ok": True, "workspace": str(selected),
+                        **self.app.workspace_options()})
+        elif action == "browse":
+            creating = data.get("mode") == "create"
+            start = ws.default_workspace_parent() if creating else None
+            chosen = self._native_folder_dialog(start=start)
+            payload = {"ok": True, "path": str(chosen) if chosen else ""}
+            if chosen and creating:
+                payload["suggestion"] = str(ws.suggest_inside(Path(chosen)))
+            self._json(payload)
+        elif action == "create":
+            requested = str(data.get("path") or "").strip()
+            if not requested:
+                raise ValueError("Choose where the new workspace should live.")
+            destination = Path(requested).expanduser()
+            if not destination.is_absolute():
+                raise ValueError("Give the full path to the new workspace folder.")
+            created = ws.create_workspace(destination)
+            self.app.set_root(created)
+            self._json({"ok": True, "workspace": str(created),
+                        **self.app.workspace_options()})
+        elif action == "repair":
+            report = ws.restore_missing(self.app.require_root())
+            restored = len(report["restored"])
+            self._json({
+                "ok": True, **report,
+                "message": (f"Restored {restored} missing toolkit "
+                            f"{'file' if restored == 1 else 'files'}."
+                            if restored else "Nothing was missing from the toolkit."),
+            })
+        elif action == "inspect":
+            self._json({"ok": True, **ws.inspect_workspace(self.app.require_root())})
+        else:
+            self.send_error(404)
 
     def _check_job(self, root, log):
         log("Checking the latest stable GitHub release…", step="check")
         return check_latest(root)
 
-    def _native_folder_dialog(self):
+    def _native_folder_dialog(self, start=None):
+        """The window's own folder chooser when there is a window, Tk otherwise."""
+        actions = self.app.shell_actions
+        if actions is not None:
+            chosen = actions.pick_folder(
+                "Choose a folder", start or self.app.root or ws.default_workspace_parent(),
+            )
+            return str(chosen) if chosen else None
         try:
             import tkinter
             from tkinter import filedialog
@@ -557,8 +766,9 @@ class Handler(BaseHTTPRequestHandler):
             window.withdraw()
             window.attributes("-topmost", True)
             selected = filedialog.askdirectory(
-                title="Choose your Anki LLM Optimizer folder",
-                initialdir=str(self.app.root), mustexist=True,
+                title="Choose your PRISM workspace folder",
+                initialdir=str(start or self.app.root or ws.default_workspace_parent()),
+                mustexist=True,
             )
             window.destroy()
             return selected or None
@@ -577,7 +787,7 @@ class Handler(BaseHTTPRequestHandler):
         if not incoming:
             raise ValueError("Dropped file has no name.")
         extension = Path(incoming).suffix.lower()
-        root = self.app.root
+        root = self.app.require_root()
         if kind == "deck":
             if extension != ".apkg":
                 raise ValueError("The deck drop zone accepts .apkg files only.")
@@ -618,33 +828,58 @@ class Handler(BaseHTTPRequestHandler):
                     "module": module, "kind": kind})
 
 
-def serve(root, port=0, open_browser=True, verbose=False):
-    application = Application(root)
+def start_server(root, port=0, verbose=False, shell=None):
+    """Bind the loopback helper and serve it on a background thread.
+
+    Returns the server and the application, so a caller that owns a window can
+    read ``application.url`` and shut the whole thing down when the window
+    closes. Raises before anything is started if ``root`` is not a project.
+    """
+    application = Application(root, shell=shell)
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     server.application = application  # type: ignore[attr-defined]
     server.verbose = verbose  # type: ignore[attr-defined]
-    address, chosen_port = server.server_address
-    url = f"http://{address}:{chosen_port}/"
-    print(f"Anki Optimizer Control Center: {url}")
-    print("Keep this window open while using the dashboard. Press Ctrl+C to stop.")
+    application.host, application.port = server.server_address[0], server.server_address[1]
+    thread = threading.Thread(
+        target=server.serve_forever, kwargs={"poll_interval": 0.25},
+        name="prism-http", daemon=True,
+    )
+    thread.start()
+    server.worker = thread  # type: ignore[attr-defined]
+    return server, application
+
+
+def serve(root, port=0, open_browser=True, verbose=False):
+    server, application = start_server(root, port=port, verbose=verbose)
+    print(f"PRISM: {application.url}")
+    print("Keep this window open while using PRISM. Press Ctrl+C to stop.")
     if open_browser:
-        threading.Timer(0.35, lambda: webbrowser.open(url)).start()
+        threading.Timer(0.35, lambda: webbrowser.open(application.url)).start()
     try:
-        server.serve_forever(poll_interval=0.25)
+        while True:
+            time.sleep(0.4)
     except KeyboardInterrupt:
-        print("\nControl Center closed.")
+        print("\nPRISM closed.")
     finally:
+        server.shutdown()
         server.server_close()
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", default=str(ROOT_FROM_FILE))
+    parser.add_argument("--root", default=None,
+                        help="The project folder to open. Defaults to the one PRISM "
+                             "last used, or the checkout this file sits in.")
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
-    serve(args.root, args.port, not args.no_browser, args.verbose)
+    root = args.root
+    if root is None:
+        remembered = ws.remembered_workspace()
+        candidate = Path(__file__).resolve().parents[1]
+        root = str(remembered) if remembered else (str(candidate) if is_project(candidate) else None)
+    serve(root, args.port, not args.no_browser, args.verbose)
 
 
 if __name__ == "__main__":

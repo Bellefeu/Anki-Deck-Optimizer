@@ -1,0 +1,178 @@
+name: Build PRISM
+
+on:
+  push:
+    tags: ["v*"]
+  # Running this by hand builds all four targets and uploads them as run
+  # artifacts without publishing anything: the publish job below is gated on a
+  # tag. That is the rehearsal, and it is worth doing before the first tag,
+  # because a tag that fails halfway leaves a version number spent.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: macOS Apple Silicon
+            os: macos-14
+            artifact: prism-macos-arm64
+          - label: macOS Intel
+            os: macos-13
+            artifact: prism-macos-x86_64
+          - label: Windows
+            os: windows-latest
+            artifact: prism-windows
+          # The oldest still-supported runner, because a frozen application
+          # links the glibc it was built against and cannot run on anything
+          # older than that.
+          - label: Linux
+            os: ubuntu-22.04
+            artifact: prism-linux
+    steps:
+      - uses: actions/checkout@v4
+
+      # Not on Linux. There, the GTK and WebKit2 bindings are distribution
+      # packages built against the distribution's own interpreter, and a
+      # separately installed Python cannot import them. The runner's system
+      # python3 is 3.10, which is the floor PRISM targets anyway.
+      - uses: actions/setup-python@v5
+        if: runner.os != 'Linux'
+        with:
+          python-version: "3.12"
+
+      - name: System web view bindings
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+
+      - name: Build environment
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            # --system-site-packages so the build can see python3-gi.
+            python3 -m venv --system-site-packages .buildenv
+            echo "PRISM_PYTHON=$PWD/.buildenv/bin/python" >> "$GITHUB_ENV"
+          else
+            echo "PRISM_PYTHON=python" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build dependencies
+        shell: bash
+        run: |
+          "$PRISM_PYTHON" -m pip install --upgrade pip
+          "$PRISM_PYTHON" -m pip install -r appbuild/requirements-build.txt
+
+      # A Linux build with no usable WebKitGTK would freeze cleanly and then
+      # open no window on a user's machine. Fail here, loudly, instead.
+      - name: The web view the build is about to freeze against
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          "$PRISM_PYTHON" - <<'PY'
+          import gi
+          gi.require_version("Gtk", "3.0")
+          gi.require_version("WebKit2", "4.1")
+          from gi.repository import Gtk, WebKit2  # noqa: F401
+          print("GTK 3.0 and WebKit2 4.1 are importable.")
+          PY
+
+      - name: Tests
+        shell: bash
+        run: '"$PRISM_PYTHON" -m unittest control_center.test_control_center appbuild.test_appbuild'
+
+      - name: Build
+        shell: bash
+        run: '"$PRISM_PYTHON" appbuild/build.py'
+
+      - name: Collect the deliverables
+        shell: bash
+        run: |
+          mkdir -p release
+          shopt -s nullglob
+          for path in dist/PRISM.exe dist/*.dmg dist/*.zip dist/*.deb dist/*.tar.gz; do
+            cp "$path" release/
+          done
+          ls -lh release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish the release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: artifacts
+        run: |
+          ls -lh
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Refuse a tag the application does not claim
+        shell: bash
+        run: |
+          python - "${GITHUB_REF_NAME#v}" <<'PY'
+          import json, sys
+          sys.path.insert(0, "control_center")
+          import workspace as ws
+          tag = sys.argv[1]
+          manifest = json.load(open("scripts/UPDATE_MANIFEST.json"))["release_version"]
+          if not (tag == ws.APP_VERSION == manifest):
+              raise SystemExit(
+                  f"Tag {tag}, APP_VERSION {ws.APP_VERSION} and manifest {manifest} "
+                  "must all agree before a release is published."
+              )
+          print(f"Releasing {tag}.")
+          PY
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## Install PRISM
+
+            | Your computer | Download |
+            | --- | --- |
+            | Windows | `PRISM.exe` |
+            | Mac, Apple Silicon (2020 and later) | `PRISM-*-macOS-AppleSilicon.dmg` |
+            | Mac, Intel | `PRISM-*-macOS-Intel.dmg` |
+            | Debian, Ubuntu | `prism_*_amd64.deb` |
+            | Any other Linux | `PRISM-*-linux-x86_64.tar.gz` |
+
+            PRISM carries its own Python and the whole toolkit. On first launch it
+            asks where your work should live and creates that folder for you.
+
+            These builds are not signed with a paid Apple or Microsoft certificate.
+            On macOS, use **System Settings, Privacy & Security, Open Anyway** the
+            first time. On Windows, click **More info**, then **Run anyway**.
+
+            `SHA256SUMS.txt` lists the checksum of every file above.

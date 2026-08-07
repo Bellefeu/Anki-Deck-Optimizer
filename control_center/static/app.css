@@ -1553,6 +1553,150 @@ button:disabled { opacity: 0.34; cursor: not-allowed; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 26px; }
 
 /* ------------------------------------------------------------------ *
+ * Window chrome
+ *
+ * As an application, PRISM owns the whole window rather than a tab in
+ * something else. On macOS the title bar is made transparent and the page
+ * runs underneath it, so the field reaches the very top of the glass and
+ * only the traffic lights sit on it. That costs the top strip: nothing
+ * clickable may live where the invisible title bar still takes the drag,
+ * so every column starts lower down.
+ * ------------------------------------------------------------------ */
+
+body.chrome-inset .rail { padding-top: 64px; }
+body.chrome-inset main { padding-top: 54px; }
+body.chrome-inset .welcome-inner { padding-top: 46px; }
+
+/* ------------------------------------------------------------------ *
+ * First run
+ *
+ * Before a workspace exists there is nothing to navigate, so the rail and
+ * the top bar are not drawn at all. What is left is one column of type on
+ * the void with two ways forward, held to the same measure as every other
+ * screen.
+ * ------------------------------------------------------------------ */
+
+body.needs-workspace .app-shell { display: none; }
+
+.welcome {
+  position: relative;
+  z-index: 3;
+  min-height: 100vh;
+  display: grid;
+  justify-items: center;
+  padding: clamp(30px, 6vh, 72px) clamp(22px, 5vw, 74px) 90px;
+}
+.welcome[hidden] { display: none; }
+
+.welcome-inner {
+  width: min(880px, 100%);
+  animation: view-rise 0.9s var(--ease);
+}
+
+.welcome-mark { width: 54px; height: 54px; margin-bottom: 20px; }
+.welcome-mark svg { width: 100%; height: 100%; overflow: visible; }
+
+.welcome h1 { max-width: 15ch; }
+.welcome .lede { max-width: 56ch; }
+
+.welcome-choices {
+  margin-top: clamp(28px, 5vh, 56px);
+  display: grid;
+  gap: 4px;
+}
+
+.welcome-choice {
+  position: relative;
+  padding: clamp(28px, 4vh, 46px) 0 clamp(20px, 3vh, 34px);
+}
+.welcome-choice::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    rgba(140, 176, 245, 0.26) 0%,
+    rgba(140, 176, 245, 0.09) 32%,
+    rgba(140, 176, 245, 0) 68%);
+  pointer-events: none;
+}
+.welcome-choice h2 { margin: 8px 0 8px; }
+.welcome-choice p { margin: 0 0 20px; max-width: 52ch; color: var(--ink-soft); font-size: 13.5px; line-height: 1.65; }
+
+.welcome-path { display: grid; gap: 7px; margin-bottom: 18px; max-width: 620px; }
+.welcome-path > span {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--ink-ghost);
+}
+.welcome-path input {
+  width: 100%;
+  padding: 11px 2px;
+  border: 0;
+  border-bottom: 1px solid rgba(140, 176, 245, 0.18);
+  background: transparent;
+  color: var(--ink);
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.4s var(--ease);
+}
+.welcome-path input:focus { border-bottom-color: rgba(150, 190, 255, 0.55); }
+
+.welcome-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+.welcome-recent { display: grid; gap: 2px; margin-bottom: 18px; }
+.welcome-recent:empty { display: none; }
+.welcome-recent button {
+  justify-self: start;
+  max-width: 100%;
+  padding: 9px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  transition: color 0.35s var(--ease);
+}
+.welcome-recent button:hover { color: var(--white-hot); }
+
+.welcome-status {
+  margin-top: 30px;
+  min-height: 20px;
+  color: var(--ink-faint);
+  font-size: 12.5px;
+}
+.welcome-status[data-state="error"] { color: var(--rose); }
+.welcome-status[data-state="working"] { color: var(--cobalt-soft); }
+.welcome-status[data-state="done"] { color: var(--mint); }
+
+/* ------------------------------------------------------------------ *
+ * Toolkit integrity
+ * ------------------------------------------------------------------ */
+
+.integrity-detail {
+  margin-top: 18px;
+  display: grid;
+  gap: 6px;
+  color: var(--ink-faint);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.integrity-detail:empty { display: none; }
+.integrity-detail code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--cobalt-pale);
+  overflow-wrap: anywhere;
+}
+.integrity-detail .integrity-note[data-tone="warn"] { color: var(--amber-soft); }
+.integrity-detail .integrity-note[data-tone="ok"] { color: var(--mint); }
+
+/* ------------------------------------------------------------------ *
  * Adaptations
  * ------------------------------------------------------------------ */
 
@@ -1604,6 +1748,8 @@ button:disabled { opacity: 0.34; cursor: not-allowed; }
   .guide-index nav { grid-template-columns: 1fr; }
   .prompt-card-grid, .review-decision-grid { grid-template-columns: 1fr; }
   .guide-chapter { padding: 26px 22px; }
+  .welcome-actions { flex-direction: column; align-items: stretch; }
+  .welcome-actions button { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
