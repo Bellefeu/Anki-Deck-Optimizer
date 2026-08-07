@@ -15,9 +15,9 @@ request.
 ## Two ways in
 
 **As an application.** `PRISM.exe`, `PRISM.app` or the Linux packages, built by
-`packaging/build.py` and published from `.github/workflows/release.yml`. A build carries a
+`appbuild/build.py` and published from `.github/workflows/release.yml`. A build carries a
 frozen interpreter and a `payload/` copy of every publisher-owned file, so it needs no
-Python and no repository. See [`packaging/README.md`](../packaging/README.md).
+Python and no repository. See [`appbuild/README.md`](../appbuild/README.md).
 
 **From a clone.** `PRISM - Windows.cmd`, `PRISM - Mac.command`, or
 `bash control_center/launch.sh` still open the same dashboard in the default browser, and
@@ -76,7 +76,7 @@ Only a GitHub Release should be offered to users. Before tagging a release:
 python3 scripts/check_version.py --write
 python3 control_center/build_manifest.py 1.5.0
 python3 scripts/selftest.py
-python3 -m unittest control_center.test_control_center packaging.test_packaging
+python3 -m unittest control_center.test_control_center appbuild.test_appbuild
 git diff --check
 ```
 
@@ -90,11 +90,11 @@ for a new feature). Never reuse a published version number.
 
 The manifest has to be rebuilt before the application is, because a build copies its
 payload out of the manifest and refuses to start a workspace if a hash disagrees. The
-release workflow runs `build_manifest.py` and then `packaging/build.py`, in that order,
+release workflow runs `build_manifest.py` and then `appbuild/build.py`, in that order,
 for exactly this reason.
 
 `APP_VERSION` in `workspace.py` is the number on the downloaded file. It must equal the
-manifest's `release_version` at build time, and `test_packaging.py` fails the build if it
+manifest's `release_version` at build time, and `test_appbuild.py` fails the build if it
 does not. The two numbers exist because they legitimately drift apart afterwards: the
 release updater can carry a workspace's toolkit forward without anyone downloading a new
 application, so an installed PRISM 1.5.0 may correctly be looking at a 1.6.0 workspace.

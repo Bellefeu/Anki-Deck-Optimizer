@@ -13,7 +13,7 @@ into grey mush, so a second master draws a handful of thicker strands that
 still read as a prism at 16px. Every delivered size is area averaged down
 from whichever master suits it.
 
-    python3 packaging/icons.py build/icons
+    python3 appbuild/icons.py build/icons
 """
 
 from __future__ import annotations

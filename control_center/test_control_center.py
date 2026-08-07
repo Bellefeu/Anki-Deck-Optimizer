@@ -563,6 +563,15 @@ class HttpTests(unittest.TestCase):
                 thread.join(timeout=5)
 
 
+PIPELINE_TOOLS = ("pdftotext", "pdftoppm", "pdfinfo", "pdfimages", "tesseract")
+MISSING_TOOLS = [name for name in PIPELINE_TOOLS if not shutil.which(name)]
+
+
+@unittest.skipIf(
+    MISSING_TOOLS,
+    "an update is proved by running the staged copy's own self-test, which needs "
+    f"the pipeline toolchain: missing {', '.join(MISSING_TOOLS)}",
+)
 class UpdateTests(unittest.TestCase):
     def test_successful_update_preserves_used_project_bytes_and_statuses(self):
         with tempfile.TemporaryDirectory(dir=ROOT.parent) as temp:

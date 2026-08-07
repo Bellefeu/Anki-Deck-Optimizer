@@ -80,7 +80,7 @@ scripts/
   bootstrap.py             run this first
   selftest.py              isolated safety checks. Run in any new environment.
 control_center/            PRISM dashboard, window shell, installer, and safe patcher
-packaging/                 how PRISM.exe and its siblings are built
+appbuild/                  how PRISM.exe and its siblings are built
 ```
 
 ## The four things that will save you a day each

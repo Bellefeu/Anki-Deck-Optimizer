@@ -6,8 +6,8 @@ native code, and the web view it drives is a different library on each system.
 So this script does one platform, the one it is standing on, and the release
 workflow runs it once per runner.
 
-    python3 packaging/build.py                 # everything for this platform
-    python3 packaging/build.py --no-installers # just the frozen application
+    python3 appbuild/build.py                 # everything for this platform
+    python3 appbuild/build.py --no-installers # just the frozen application
 
 What comes out:
 
@@ -121,7 +121,7 @@ def check_tooling():
     except ImportError as exc:
         raise BuildError(
             "PyInstaller is not installed. Run:\n"
-            "    python3 -m pip install -r packaging/requirements-build.txt"
+            "    python3 -m pip install -r appbuild/requirements-build.txt"
         ) from exc
     try:
         import webview  # noqa: F401
@@ -129,7 +129,7 @@ def check_tooling():
         raise BuildError(
             "pywebview is not installed, so the built application would have no "
             "window. Run:\n"
-            "    python3 -m pip install -r packaging/requirements-build.txt"
+            "    python3 -m pip install -r appbuild/requirements-build.txt"
         ) from exc
     if sys.version_info < (3, 10):
         raise BuildError(

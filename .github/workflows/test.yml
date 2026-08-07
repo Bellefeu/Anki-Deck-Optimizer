@@ -29,12 +29,26 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      # No pip install. Everything under test is standard library only, and
-      # proving that on a bare interpreter is part of what the suite is for.
-      - name: Dashboard, workspace and packaging tests
-        run: python -m unittest control_center.test_control_center packaging.test_packaging --verbose
+      # The update tests prove a real update by running the staged copy's own
+      # self-test, which shells out to the pipeline toolchain. That is one apt
+      # line on Linux and a slow, flaky brew or choco install everywhere else,
+      # so Linux is where those tests actually run. On macOS and Windows they
+      # skip themselves and say so in the output rather than passing quietly.
+      - name: Pipeline toolchain
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr
 
+      # No pip step. Both suites are standard library only, and proving that
+      # on a bare interpreter is part of what they are for.
+      - name: Dashboard, workspace and application tests
+        run: python -m unittest control_center.test_control_center appbuild.test_appbuild --verbose
+
+      # selftest.py installs its own Python dependencies through scripts/deps.py
+      # and needs the toolchain above, so it runs where that toolchain is.
       - name: Pipeline self-tests
+        if: runner.os == 'Linux'
         run: python scripts/selftest.py
 
       - name: Manifest matches the working tree

@@ -31,12 +31,12 @@
 !control_center/**
 
 # --- how the application is built, and by what ---------------------------
-#  packaging/ is publisher build tooling only. It is deliberately outside
+#  appbuild/ is publisher build tooling only. It is deliberately outside
 #  scripts/UPDATE_MANIFEST.json, so it never lands in a user's workspace.
-!packaging/
-!packaging/*.py
-!packaging/*.txt
-!packaging/*.md
+!appbuild/
+!appbuild/*.py
+!appbuild/*.txt
+!appbuild/*.md
 !.github/
 !.github/**
 

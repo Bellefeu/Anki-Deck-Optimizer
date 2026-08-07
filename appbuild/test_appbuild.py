@@ -20,7 +20,7 @@ from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path[:0] = [str(ROOT / "control_center"), str(ROOT / "scripts"), str(ROOT / "packaging")]
+sys.path[:0] = [str(ROOT / "control_center"), str(ROOT / "scripts"), str(ROOT / "appbuild")]
 
 import build as recipe  # noqa: E402
 import desktop  # noqa: E402
@@ -72,7 +72,7 @@ class PayloadTests(unittest.TestCase):
                                 "the exclusion names a file that no longer exists")
         for relative in carried:
             with self.subTest(relative=relative):
-                self.assertFalse(relative.startswith("packaging/"))
+                self.assertFalse(relative.startswith("appbuild/"))
                 self.assertFalse(relative.startswith(".github/"))
 
     def test_the_allowlist_travels_with_the_files_it_describes(self):
@@ -596,7 +596,7 @@ class WorkflowTests(unittest.TestCase):
         # The build refuses a payload that disagrees with the manifest, so the
         # manifest has to be committed rather than generated during a release.
         self.assertNotIn("build_manifest.py", workflow)
-        self.assertIn("packaging/build.py", workflow)
+        self.assertIn("appbuild/build.py", workflow)
         self.assertIn("SHA256SUMS.txt", workflow)
 
     def test_the_tests_run_on_a_bare_interpreter(self):
@@ -606,13 +606,21 @@ class WorkflowTests(unittest.TestCase):
         instructions = "\n".join(line for line in workflow.splitlines()
                                  if not line.lstrip().startswith("#"))
         self.assertNotIn("pip install", instructions)
-        self.assertIn("packaging.test_packaging", workflow)
+        self.assertIn("appbuild.test_appbuild", workflow)
         self.assertIn("control_center.test_control_center", workflow)
+
+    def test_the_build_tooling_cannot_be_shadowed_by_an_installed_package(self):
+        """`packaging` is a real distribution that setuptools drags in, and a
+        namespace directory of the same name loses to it on any machine that
+        has one. This folder is named and shaped so it cannot happen again."""
+        self.assertTrue((ROOT / "appbuild/__init__.py").is_file(),
+                        "a regular package wins the import; a namespace one does not")
+        self.assertFalse((ROOT / "packaging").exists())
 
 
 class CopyTests(unittest.TestCase):
     def test_nothing_a_user_reads_carries_an_em_or_en_dash(self):
-        for relative in ("packaging/README.md",):
+        for relative in ("appbuild/README.md",):
             with self.subTest(relative=relative):
                 text = (ROOT / relative).read_text(encoding="utf-8")
                 self.assertNotIn("—", text)

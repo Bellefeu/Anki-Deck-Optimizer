@@ -74,7 +74,7 @@ jobs:
         shell: bash
         run: |
           "$PRISM_PYTHON" -m pip install --upgrade pip
-          "$PRISM_PYTHON" -m pip install -r packaging/requirements-build.txt
+          "$PRISM_PYTHON" -m pip install -r appbuild/requirements-build.txt
 
       # A Linux build with no usable WebKitGTK would freeze cleanly and then
       # open no window on a user's machine. Fail here, loudly, instead.
@@ -92,11 +92,11 @@ jobs:
 
       - name: Tests
         shell: bash
-        run: '"$PRISM_PYTHON" -m unittest control_center.test_control_center packaging.test_packaging'
+        run: '"$PRISM_PYTHON" -m unittest control_center.test_control_center appbuild.test_appbuild'
 
       - name: Build
         shell: bash
-        run: '"$PRISM_PYTHON" packaging/build.py'
+        run: '"$PRISM_PYTHON" appbuild/build.py'
 
       - name: Collect the deliverables
         shell: bash

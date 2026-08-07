@@ -4,8 +4,8 @@ Everything in this folder is publisher build tooling. None of it is listed in
 `scripts/UPDATE_MANIFEST.json`, so none of it is ever copied into a user's workspace.
 
 ```bash
-python3 -m pip install -r packaging/requirements-build.txt
-python3 packaging/build.py
+python3 -m pip install -r appbuild/requirements-build.txt
+python3 appbuild/build.py
 ```
 
 The result lands in `dist/`.
@@ -76,7 +76,7 @@ file directly, so the icon and the interface cannot drift apart, and no binary a
 committed. Preview it on its own:
 
 ```bash
-python3 packaging/icons.py build/icons
+python3 appbuild/icons.py build/icons
 ```
 
 It draws three masters, not one. Twenty two rulings are the mark, but they only survive
@@ -87,7 +87,7 @@ work. macOS gets Apple's inset squircle, Windows and Linux get a nearly full ble
 ## Tests
 
 ```bash
-python3 -m unittest packaging.test_packaging
+python3 -m unittest appbuild.test_appbuild
 ```
 
 Standard library only, and no PyInstaller. They cover the payload, the workspace a build
@@ -101,7 +101,7 @@ the release if they do not.
 
 ```bash
 python3 control_center/build_manifest.py 1.5.0     # after every source change
-python3 -m unittest control_center.test_control_center packaging.test_packaging
+python3 -m unittest control_center.test_control_center appbuild.test_appbuild
 git commit -am "Release 1.5.0" && git tag v1.5.0 && git push --tags
 ```
 
