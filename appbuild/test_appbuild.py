@@ -9,6 +9,7 @@ that assembles them. Freezing itself is proved by the release workflow.
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import re
@@ -577,6 +578,83 @@ class RecipeTests(unittest.TestCase):
         self.assertIs(plist["NSRequiresAquaSystemAppearance"], False)
         self.assertIs(plist["NSHighResolutionCapable"], True)
         self.assertEqual(plist["CFBundleIconFile"], "PRISM.icns")
+
+    def test_the_windows_version_resource_makes_its_own_directory(self):
+        """It is written before PyInstaller runs, which is what creates the
+        work folder, and only on Windows. Depending on a caller to have made
+        the folder first fails on exactly one of the four runners, which is
+        the most expensive place to find out."""
+        with tempfile.TemporaryDirectory() as temp:
+            destination = Path(temp) / "does" / "not" / "exist" / "version.txt"
+            recipe.windows_version_resource(destination)
+            written = destination.read_text(encoding="utf-8")
+        self.assertIn("VSVersionInfo", written)
+        self.assertIn(f"'{ws.APP_VERSION}'", written)
+        self.assertIn("'PRISM.exe'", written)
+
+    def test_the_windows_freeze_command_can_be_assembled_from_any_platform(self):
+        """The Windows-only branch of freeze() writes a file into the work
+        folder, and nothing else on this machine will ever run it. Building
+        the command with PyInstaller stubbed out exercises that branch here
+        instead of on the one runner where the mistake is expensive."""
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp) / "never-created"
+            captured = {}
+
+            with mock.patch.object(recipe, "system", return_value="win32"), \
+                    mock.patch.object(recipe, "WORK", work), \
+                    mock.patch.object(recipe, "run",
+                                      lambda argv, **kw: captured.update(argv=argv)):
+                recipe.freeze(onefile=True)
+
+            argv = captured["argv"]
+            self.assertIn("--version-file", argv)
+            resource = Path(argv[argv.index("--version-file") + 1])
+            self.assertTrue(resource.is_file(), "the version resource was never written")
+            self.assertIn("--onefile", argv)
+            self.assertIn("--windowed", argv)
+            for module in recipe.HIDDEN["win32"]:
+                with self.subTest(module=module):
+                    self.assertIn(module, argv)
+
+    def test_the_release_workflow_uploads_what_the_build_gathered(self):
+        """Naming artifacts in build.py and again in the workflow is how the
+        first release run tried to copy dist/PRISM.exe on macOS. Only one of
+        the two is allowed to know a filename."""
+        workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        self.assertEqual(recipe.RELEASE.parent, recipe.DIST)
+        self.assertIn("path: dist/release/*", workflow)
+        for invented in ("dist/PRISM.exe", "dist/*.dmg", "dist/*.deb",
+                         "dist/*.tar.gz", "dist/*.zip"):
+            with self.subTest(invented=invented):
+                self.assertNotIn(invented, workflow)
+
+    def test_every_platform_reports_what_it_built_and_what_to_publish(self):
+        """main() copies result["deliverables"] and prints result["built"], so
+        a finish function returning the old flat list would fail at the very
+        end of a long build with a confusing error."""
+        tree = ast.parse((ROOT / "appbuild/build.py").read_text(encoding="utf-8"))
+        for name in ("finish_macos", "finish_windows", "finish_linux"):
+            function = next(node for node in tree.body
+                            if isinstance(node, ast.FunctionDef) and node.name == name)
+            returns = [node for node in ast.walk(function) if isinstance(node, ast.Return)]
+            with self.subTest(function=name):
+                self.assertTrue(returns, f"{name} returns nothing")
+                for returned in returns:
+                    self.assertIsInstance(returned.value, ast.Dict,
+                                          f"{name} returns something other than a mapping")
+                    keys = {key.value for key in returned.value.keys}
+                    self.assertEqual(keys, {"built", "deliverables"},
+                                     f"{name} returns {sorted(keys)}")
+
+    def test_the_runner_images_are_ones_github_still_offers(self):
+        """macos-13 was retired in December 2025 and its jobs never start."""
+        workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        for retired in ("macos-13", "macos-12", "macos-11",
+                        "ubuntu-18.04", "ubuntu-20.04", "windows-2019"):
+            with self.subTest(retired=retired):
+                self.assertNotIn(f"os: {retired}", workflow)
+        self.assertIn("os: macos-15-intel", workflow)
 
     def test_the_guide_and_the_release_notes_name_files_a_build_can_emit(self):
         """A guide that names a download nobody can find is worse than one

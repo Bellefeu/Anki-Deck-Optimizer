@@ -38,6 +38,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build"
 DIST = ROOT / "dist"
+# The single folder the release workflow uploads. Everything a user downloads
+# is copied here and nothing else is, so no other file needs to know a name.
+RELEASE = DIST / "release"
 WORK = BUILD / "pyinstaller"
 ICONS = BUILD / "icons"
 PAYLOAD = BUILD / "payload"
@@ -187,6 +190,11 @@ def windows_version_resource(destination):
     """A VERSIONINFO block so Explorer's properties panel says PRISM."""
     parts = [int(piece) for piece in version().split(".")] + [0, 0, 0, 0]
     quad = ", ".join(str(piece) for piece in parts[:4])
+    # Owns its own directory rather than trusting a caller to have made it.
+    # This is written before PyInstaller runs, which is what creates the work
+    # folder, and only on Windows, so getting the order wrong here fails on
+    # exactly one of the four runners.
+    destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(f"""VSVersionInfo(
   ffi=FixedFileInfo(
     filevers=({quad}), prodvers=({quad}),
@@ -210,6 +218,7 @@ def windows_version_resource(destination):
 
 
 def freeze(*, onefile, name=APP_NAME):
+    WORK.mkdir(parents=True, exist_ok=True)
     separator = os.pathsep
     icon = {"darwin": ICONS / "PRISM.icns", "win32": ICONS / "PRISM.ico"}.get(
         system(), ICONS / "prism-256.png")
@@ -239,8 +248,6 @@ def freeze(*, onefile, name=APP_NAME):
     for module in EXCLUDED:
         argv += ["--exclude-module", module]
     argv.append(str(ENTRY))
-
-    WORK.mkdir(parents=True, exist_ok=True)
     run(argv, cwd=str(ROOT))
 
 
@@ -286,10 +293,10 @@ def finish_macos(*, installers):
     run(["codesign", "--force", "--deep", "--timestamp=none", "--sign", "-", str(bundle)])
     run(["codesign", "--verify", "--deep", "--strict", str(bundle)])
 
-    produced = [bundle]
-    if installers:
-        produced.append(build_dmg(bundle))
-    return produced
+    if not installers:
+        return {"built": [bundle], "deliverables": []}
+    image = build_dmg(bundle)
+    return {"built": [bundle], "deliverables": [image] if image else []}
 
 
 def build_dmg(bundle):
@@ -317,9 +324,8 @@ def finish_windows(*, installers):
     executable = DIST / f"{APP_NAME}.exe"
     if not executable.is_file():
         raise BuildError(f"PyInstaller did not produce {executable}")
-    produced = [executable]
     if not installers:
-        return produced
+        return {"built": [], "deliverables": [executable]}
 
     # A second, unpacked build for people whose antivirus dislikes a single
     # file that unpacks itself into the temporary folder on every launch, and
@@ -335,8 +341,7 @@ def finish_windows(*, installers):
         for path in sorted(folder.rglob("*")):
             if path.is_file():
                 bundle.write(path, Path(APP_NAME) / path.relative_to(folder))
-    produced.append(archive)
-    return produced
+    return {"built": [folder], "deliverables": [executable, archive]}
 
 
 # --------------------------------------------------------------------------
@@ -395,14 +400,13 @@ def finish_linux(*, installers):
     folder = DIST / APP_NAME
     if not folder.is_dir():
         raise BuildError(f"PyInstaller did not produce {folder}")
-    produced = [folder]
     if not installers:
-        return produced
-    produced.append(build_tarball(folder))
-    deb = build_deb(folder)
-    if deb:
-        produced.append(deb)
-    return produced
+        return {"built": [folder], "deliverables": []}
+    deliverables = [build_tarball(folder)]
+    package = build_deb(folder)
+    if package:
+        deliverables.append(package)
+    return {"built": [folder], "deliverables": deliverables}
 
 
 def build_tarball(folder):
@@ -537,7 +541,7 @@ def main(argv=None):
 
     announce("Packaging")
     installers = not args.no_installers
-    produced = {
+    result = {
         "darwin": finish_macos,
         "win32": finish_windows,
         "linux": finish_linux,
@@ -546,11 +550,25 @@ def main(argv=None):
     if not args.keep_build and WORK.exists():
         shutil.rmtree(WORK, ignore_errors=True)
 
+    # Everything meant for a human to download is gathered into one folder,
+    # so that the release workflow can upload a directory without knowing a
+    # single filename. Naming them in both places is how the first run
+    # shipped a step that copied dist/PRISM.exe on macOS.
+    deliverables = [path for path in result["deliverables"] if path is not None]
+    if installers and not deliverables:
+        raise BuildError("Packaging produced nothing to publish.")
+    RELEASE.mkdir(parents=True, exist_ok=True)
+    collected = []
+    for path in deliverables:
+        target = RELEASE / path.name
+        shutil.copy2(path, target)
+        collected.append(target)
+
     announce("Done")
-    for path in produced:
-        if path is None:
-            continue
-        print(f"    {path.relative_to(ROOT)}  ({human(weigh(path))})")
+    for path in result["built"]:
+        print(f"    built        {path.relative_to(ROOT)}  ({human(weigh(path))})")
+    for path in collected:
+        print(f"    to publish   {path.relative_to(ROOT)}  ({human(weigh(path))})")
     return 0
 
 

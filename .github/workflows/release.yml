@@ -27,8 +27,12 @@ jobs:
           - label: macOS Apple Silicon
             os: macos-14
             artifact: prism-macos-arm64
+          # macos-13 was retired in December 2025. macos-15-intel is the
+          # replacement and also the last x86_64 macOS image Actions will
+          # offer: it goes away in autumn 2027, and with it the ability to
+          # build PRISM for Intel Macs here at all.
           - label: macOS Intel
-            os: macos-13
+            os: macos-15-intel
             artifact: prism-macos-x86_64
           - label: Windows
             os: windows-latest
@@ -97,20 +101,17 @@ jobs:
         shell: bash
         run: '"$PRISM_PYTHON" appbuild/build.py'
 
-      - name: Collect the deliverables
+      # build.py gathers everything meant for a human into dist/release, and
+      # fails if that comes out empty, so this uploads a directory rather than
+      # restating filenames that only build.py should know.
+      - name: What was built
         shell: bash
-        run: |
-          mkdir -p release
-          shopt -s nullglob
-          for path in dist/PRISM.exe dist/*.dmg dist/*.zip dist/*.deb dist/*.tar.gz; do
-            cp "$path" release/
-          done
-          ls -lh release
+        run: ls -lh dist/release
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: release/*
+          path: dist/release/*
           if-no-files-found: error
           retention-days: 14
 
