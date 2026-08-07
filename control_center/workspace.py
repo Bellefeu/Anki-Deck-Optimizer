@@ -20,6 +20,7 @@ import json
 import os
 import re
 import shutil
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -35,7 +36,7 @@ from pathlib import Path
 # can carry a workspace's toolkit forward without anyone downloading a new
 # application, so an installed PRISM 1.5.0 may quite correctly be looking at a
 # 1.6.0 workspace. Both numbers are shown, which is why there are two.
-APP_VERSION = "1.5.1"
+APP_VERSION = "1.5.2"
 
 CONFIG_VERSION = 1
 MANIFEST_REL = "scripts/UPDATE_MANIFEST.json"
@@ -335,6 +336,57 @@ def system_python(refresh=False):
 
     _PYTHON_CACHE.update({"value": found, "taken": now})
     return found
+
+
+# --------------------------------------------------------------------------
+# Reaching the network from a build
+#
+# The same shape of problem as the search path above, one layer down. A built
+# PRISM carries the interpreter it was frozen with, and that interpreter's ssl
+# module was compiled knowing where the certificate authorities lived on the
+# machine that built it: a path inside the build runner's own Python. On the
+# computer that downloads the application, nothing is there.
+#
+# Nothing warns about this. The trust store simply comes up empty and every
+# HTTPS request fails with CERTIFICATE_VERIFY_FAILED, which reads to a user
+# like GitHub being down rather than like a file that was never shipped.
+#
+# Where a real trust store does exist it stays in charge. A machine behind a
+# corporate proxy has its own root installed there, and overriding that would
+# break precisely the people whose network is already the most particular. So
+# the certificates bundled into the build are consulted only when asking the
+# system produced nothing at all.
+
+
+def _needs_bundled_certificates(context):
+    """True when this context trusts nobody, which is not a usable state."""
+    try:
+        return not context.cert_store_stats()["x509_ca"]
+    except (AttributeError, KeyError, TypeError, ValueError):
+        # An ssl module that cannot answer is not evidence of an empty store.
+        return False
+
+
+def ssl_context():
+    """A verifying SSL context that works in a build as well as a checkout.
+
+    Always verifying. A frozen application that quietly stopped checking
+    certificates would trade a visible failure for an invisible one, and this
+    is the code path that downloads and then installs a release.
+    """
+    context = ssl.create_default_context()
+    if not _needs_bundled_certificates(context):
+        return context
+    try:
+        import certifi
+    except ImportError:
+        # A checkout with nothing installed. The system store is empty here
+        # too, so this will still fail, but it fails saying so.
+        return context
+    try:
+        return ssl.create_default_context(cafile=certifi.where())
+    except (OSError, ssl.SSLError):
+        return context
 
 
 # --------------------------------------------------------------------------

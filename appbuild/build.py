@@ -81,8 +81,13 @@ EXCLUDED = (
 # platform. A local macOS build cannot reproduce this.
 UNSAFE_TO_EXCLUDE = ("distutils", "setuptools")
 
+# Hidden imports that are not PRISM's own source. Each has to be installed for
+# the freeze to see it, so requirements-build.txt names the distribution that
+# provides it and a test holds the two together.
+THIRD_PARTY_HIDDEN = {"webview": "pywebview", "certifi": "certifi"}
+
 HIDDEN = {
-    "common": ("app", "updater", "workspace", "state_io", "webview"),
+    "common": ("app", "updater", "workspace", "state_io", "webview", "certifi"),
     "darwin": ("webview.platforms.cocoa", "objc", "Foundation", "AppKit", "WebKit"),
     "win32": ("webview.platforms.edgechromium", "webview.platforms.winforms",
               "clr", "clr_loader", "pythonnet"),

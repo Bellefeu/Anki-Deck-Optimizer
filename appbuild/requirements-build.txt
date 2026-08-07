@@ -5,6 +5,14 @@
 pyinstaller>=6.10,<7
 pywebview>=5.3,<6
 
+# The certificate authorities the built application trusts. A frozen
+# interpreter looks for them at the path they occupied on the build machine,
+# which exists on no user's computer, so the store comes up empty and every
+# HTTPS call fails. PyInstaller collects this package's bundle through its own
+# hook; control_center/workspace.py falls back to it only when the machine
+# turns out to have no trust store of its own.
+certifi
+
 # pywebview's platform bindings. Each one is a no-op on the other systems, so
 # the whole file installs cleanly everywhere and only the relevant lines do
 # any work.

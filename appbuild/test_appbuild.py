@@ -14,6 +14,7 @@ import json
 import os
 import re
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -110,6 +111,30 @@ class PayloadTests(unittest.TestCase):
         report = ws.verify_payload(ROOT)
         self.assertEqual(report["missing"], [], "rebuild scripts/UPDATE_MANIFEST.json")
         self.assertEqual(report["altered"], [], "rebuild scripts/UPDATE_MANIFEST.json")
+
+    def test_the_allowlist_names_nothing_git_does_not_track(self):
+        """control_center is taken whole when the manifest is built, so a file
+        that only exists on the machine doing the building can walk into the
+        published allowlist. A .DS_Store did exactly that. It cost nothing on
+        that machine and made every fresh checkout report a missing publisher
+        file, which is a release that cannot install rather than a build that
+        will not finish."""
+        try:
+            listed = subprocess.run(
+                ["git", "ls-files", "-z"], capture_output=True, text=True,
+                cwd=str(ROOT), timeout=60,
+            )
+        except (OSError, subprocess.SubprocessError):
+            self.skipTest("git is unavailable")
+        if listed.returncode != 0:
+            self.skipTest("not a git checkout")
+        tracked = {name for name in listed.stdout.split("\0") if name}
+        manifest = json.loads(
+            (ROOT / "scripts/UPDATE_MANIFEST.json").read_text(encoding="utf-8"))
+        for relative in sorted(manifest["files"]):
+            with self.subTest(path=relative):
+                self.assertIn(relative, tracked,
+                              f"{relative} is published but git does not track it")
 
     def test_build_tooling_and_tests_never_reach_a_workspace(self):
         carried = ws.payload_files(ROOT)
@@ -575,11 +600,20 @@ class IconTests(unittest.TestCase):
 
 class RecipeTests(unittest.TestCase):
     def test_the_entry_point_and_every_hidden_import_exists(self):
+        """Ours have to be in the tree. Everyone else's has to be installed by
+        the build, or the freeze silently leaves it out and the application
+        fails at whatever it needed the package for."""
         self.assertTrue(recipe.ENTRY.is_file())
+        requirements = (ROOT / "appbuild/requirements-build.txt").read_text(encoding="utf-8")
         for module in recipe.HIDDEN["common"]:
-            if module == "webview":
-                continue
             with self.subTest(module=module):
+                if module in recipe.THIRD_PARTY_HIDDEN:
+                    distribution = recipe.THIRD_PARTY_HIDDEN[module]
+                    self.assertRegex(
+                        requirements, rf"(?mi)^{re.escape(distribution)}\b",
+                        f"{module} is declared hidden but nothing installs {distribution}",
+                    )
+                    continue
                 found = (ROOT / "control_center" / f"{module}.py").is_file() \
                     or (ROOT / "scripts" / f"{module}.py").is_file()
                 self.assertTrue(found, f"{module} is declared but is not in the tree")
