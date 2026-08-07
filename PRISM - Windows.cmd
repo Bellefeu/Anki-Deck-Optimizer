@@ -17,7 +17,7 @@ if %errorlevel% equ 0 (
 
 if "%SETUP_TRIED%"=="1" (
   echo Setup finished, but this window cannot see Python yet.
-  echo Close it, open the Control Center again, and it should start.
+  echo Close it, open PRISM again, and it should start.
   pause
   exit /b 1
 )
@@ -42,7 +42,7 @@ set "CONTROL_EXIT=%errorlevel%"
 :finished
 if not "%CONTROL_EXIT%"=="0" (
   echo.
-  echo The Control Center stopped with an error.
+  echo PRISM stopped with an error.
   pause
 )
 exit /b %CONTROL_EXIT%

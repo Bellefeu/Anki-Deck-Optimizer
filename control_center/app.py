@@ -39,7 +39,8 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 from state_io import atomic_write_bytes, load_state, summary as state_summary
 
-from updater import UpdateError, check_latest, current_version, install_update
+from updater import (RELEASES_PAGE, UpdateError, check_latest, current_version,
+                     install_update)
 
 
 def _static_root():
@@ -391,6 +392,10 @@ class Application:
             "app_version": ws.APP_VERSION,
             "shell": dict(self.shell),
             "health": self.machine_health(),
+            # Read in a browser tab, this is the only signal that the same
+            # dashboard exists as an application. Updating the toolkit in
+            # place cannot turn a launcher script into one.
+            "releases_url": RELEASES_PAGE,
         }
         if root is None:
             base.update({"project": "", "version": "", "pipeline": dict(EMPTY_PIPELINE),

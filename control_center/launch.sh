@@ -24,7 +24,7 @@ if [ -z "${PYTHON_BIN:-}" ]; then
   done
   if [ -z "${PYTHON_BIN:-}" ]; then
     printf '%s\n' "Setup finished, but this window cannot see Python yet." >&2
-    printf '%s\n' "Close it, open the Control Center again, and it should start." >&2
+    printf '%s\n' "Close it, open PRISM again, and it should start." >&2
     exit 1
   fi
 fi
