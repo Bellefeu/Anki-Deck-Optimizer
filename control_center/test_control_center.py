@@ -563,6 +563,97 @@ class HttpTests(unittest.TestCase):
                 thread.join(timeout=5)
 
 
+class ToolLookupTests(unittest.TestCase):
+    """A double-clicked PRISM inherits the launcher's environment, not the one
+    a terminal builds, so the setup a user just completed has to be visible
+    through a PATH that does not mention it."""
+
+    def setUp(self):
+        workspace.search_path(refresh=True)
+        self.addCleanup(workspace.search_path, True)
+        self.addCleanup(workspace.system_python, True)
+
+    def test_a_tool_outside_the_inherited_path_is_still_found(self):
+        with tempfile.TemporaryDirectory() as temp:
+            installed = Path(temp) / "bin"
+            installed.mkdir()
+            tool = installed / "pdftotext"
+            tool.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            tool.chmod(0o755)
+
+            # The environment a Finder or Explorer launch actually hands over,
+            # with the shell that knows better silenced as well.
+            bare = {"PATH": os.pathsep.join(("/usr/bin", "/bin"))}
+            with mock.patch.dict(os.environ, bare, clear=True), \
+                 mock.patch.object(workspace, "_login_shell_path", return_value=[]), \
+                 mock.patch.object(workspace, "_registry_path", return_value=[]), \
+                 mock.patch.object(workspace, "_UNIX_TOOL_DIRS", (str(installed),)), \
+                 mock.patch.object(workspace, "_UNIX_TOOL_GLOBS", ()), \
+                 mock.patch.object(workspace, "_WINDOWS_TOOL_GLOBS", (str(installed),)):
+                self.assertIsNone(shutil.which("pdftotext"))
+                self.assertEqual(workspace.find_tool("pdftotext", refresh=True), str(tool))
+
+    def test_the_reported_health_uses_that_wider_search(self):
+        """The four chips on the Home tab are the visible half of this. They
+        went orange for a machine that had every tool installed."""
+        with mock.patch.object(workspace, "find_tool", side_effect=lambda name, **_: (
+                "/opt/somewhere/" + name if name in ("pdftotext", "tesseract", "node") else None)):
+            health = app.Application(None).machine_health()
+        self.assertTrue(health["poppler"])
+        self.assertTrue(health["tesseract"])
+        self.assertTrue(health["node"])
+
+    def test_the_spawned_environment_carries_the_same_path(self):
+        environment = workspace.tool_environment(refresh=True)
+        self.assertEqual(environment["PATH"], workspace.search_path())
+
+    @unittest.skipIf(sys.platform == "win32", "posix login shell probe")
+    def test_the_login_shell_is_asked_what_a_terminal_would_have(self):
+        with mock.patch.dict(os.environ, {"SHELL": "/bin/sh"}):
+            self.assertIn("/usr/bin", workspace._login_shell_path())
+
+    def test_a_frozen_build_never_hands_its_own_binary_to_a_script(self):
+        """sys.executable is PRISM itself once built, so passing a script path
+        to it would launch a second PRISM instead of running the script."""
+        with mock.patch.object(workspace, "frozen", return_value=False):
+            self.assertEqual(updater._script_python(), sys.executable)
+        with mock.patch.object(workspace, "frozen", return_value=True):
+            with mock.patch.object(workspace, "system_python",
+                                   return_value=("/usr/local/bin/python3.12", "3.12.0")):
+                self.assertEqual(updater._script_python(), "/usr/local/bin/python3.12")
+            with mock.patch.object(workspace, "system_python", return_value=("", "")):
+                with self.assertRaises(updater.UpdateError):
+                    updater._script_python()
+
+
+class UpdateCheckTests(unittest.TestCase):
+    """The activity log is the only record of how a check ended, so it cannot
+    be left showing the sentence that describes work still in progress."""
+
+    def _messages(self, latest):
+        handler = app.Handler.__new__(app.Handler)
+        lines = []
+        with mock.patch.object(app, "check_latest", return_value=latest):
+            result = handler._check_job(Path("."), lambda text, step=None: lines.append(text))
+        return result, lines
+
+    def test_an_up_to_date_check_reports_its_own_answer(self):
+        result, lines = self._messages(
+            {"available": False, "installed": "1.5.0", "latest": "1.5.0"})
+        self.assertFalse(result["available"])
+        self.assertGreater(len(lines), 1)
+        self.assertFalse(lines[-1].endswith("…"))
+        self.assertIn("1.5.0", lines[-1])
+        self.assertIn("latest stable release", lines[-1])
+
+    def test_an_available_update_names_both_versions(self):
+        _, lines = self._messages(
+            {"available": True, "installed": "1.4.0", "latest": "1.6.0"})
+        self.assertFalse(lines[-1].endswith("…"))
+        self.assertIn("1.6.0", lines[-1])
+        self.assertIn("1.4.0", lines[-1])
+
+
 PIPELINE_TOOLS = ("pdftotext", "pdftoppm", "pdfinfo", "pdfimages", "tesseract")
 MISSING_TOOLS = [name for name in PIPELINE_TOOLS if not shutil.which(name)]
 

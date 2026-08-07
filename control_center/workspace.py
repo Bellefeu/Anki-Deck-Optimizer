@@ -14,12 +14,16 @@ ways of starting PRISM exercise the same code.
 
 from __future__ import annotations
 
+import glob
 import hashlib
 import json
 import os
+import re
 import shutil
+import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 
@@ -125,6 +129,212 @@ def default_workspace_parent():
 
 def suggested_workspace():
     return default_workspace_parent() / "PRISM"
+
+
+# --------------------------------------------------------------------------
+# Finding the tools the pipeline shells out to
+#
+# A double-clicked application inherits the desktop launcher's environment,
+# not the one a terminal assembles for itself. On macOS that leaves PATH as
+# /usr/bin:/bin:/usr/sbin:/sbin, which is none of the places Homebrew installs
+# into; on Windows a PATH that winget has just widened never reaches a process
+# that was already running. Either way a plain shutil.which call reports the
+# machine as unequipped while the very same command works in Terminal, which
+# is exactly the wrong answer to give someone who has just run the setup. So
+# tool lookups go through search_path() instead of the bare environment.
+
+
+# The probe below spawns a login shell, so its answer is held briefly rather
+# than recomputed for every status request. The window is short because the
+# whole point is to notice a tool that was installed a moment ago.
+_PATH_CACHE = {"value": None, "taken": 0.0}
+_PATH_TTL_SECONDS = 15.0
+
+# Where the installers behind the guided setup put things, consulted in
+# addition to whatever the shell reports. A tool installed while PRISM is open
+# is then found without anyone having to restart anything.
+_UNIX_TOOL_DIRS = (
+    "/opt/homebrew/bin", "/opt/homebrew/sbin",   # Homebrew on Apple silicon
+    "/usr/local/bin", "/usr/local/sbin",         # Homebrew on Intel, and most Linux
+    "/opt/local/bin", "/opt/local/sbin",         # MacPorts
+    "/usr/bin", "/bin", "/usr/sbin", "/sbin",
+    "/snap/bin",
+)
+
+# Same idea, for installs that carry a version number in the path.
+_UNIX_TOOL_GLOBS = (
+    "/Library/Frameworks/Python.framework/Versions/3.*/bin",  # python.org
+    "~/Library/Python/3.*/bin",                               # pip --user, macOS
+    "~/.local/bin",                                           # pip --user, Linux
+    "~/.nvm/versions/node/*/bin",                             # nvm
+)
+
+_WINDOWS_TOOL_GLOBS = (
+    r"%LOCALAPPDATA%\Microsoft\WinGet\Links",                 # winget portable packages
+    r"%LOCALAPPDATA%\Programs\Python\Python3*",
+    r"%LOCALAPPDATA%\Programs\Python\Python3*\Scripts",
+    r"%PROGRAMFILES%\nodejs",
+    r"%PROGRAMFILES%\Tesseract-OCR",
+    r"%PROGRAMFILES%\poppler*\Library\bin",
+)
+
+
+# Plenty of login profiles greet you, and that banner arrives on the same
+# stdout as the answer. The marker is what separates the two.
+_PATH_MARKER = "__prism_path__"
+
+
+def _login_shell_path():
+    """What a terminal opened right now would have on PATH.
+
+    ``-lc`` reads the login profile, which is where Homebrew's own installer
+    tells people to put its shellenv line. An interactive shell would read a
+    little more, but it can also block on a prompt, and blocking the dashboard
+    to answer a question about PATH is not a trade worth making.
+    """
+    shell = os.environ.get("SHELL") or "/bin/sh"
+    try:
+        found = subprocess.run(
+            [shell, "-lc", f'printf %s "{_PATH_MARKER}$PATH"'],
+            capture_output=True, text=True, timeout=6,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if found.returncode != 0 or _PATH_MARKER not in found.stdout:
+        return []
+    answer = found.stdout.rsplit(_PATH_MARKER, 1)[1].strip()
+    return [part for part in answer.split(os.pathsep) if part]
+
+
+def _registry_path():
+    """The PATH Windows would hand a newly opened console.
+
+    An installer edits these two registry values and broadcasts the change.
+    Long-running processes do not act on that broadcast, so PRISM reads them.
+    """
+    entries = []
+    try:
+        import winreg
+    except ImportError:
+        return entries
+    places = (
+        (winreg.HKEY_CURRENT_USER, r"Environment"),
+        (winreg.HKEY_LOCAL_MACHINE,
+         r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"),
+    )
+    for hive, subkey in places:
+        try:
+            with winreg.OpenKey(hive, subkey) as key:
+                raw, _ = winreg.QueryValueEx(key, "Path")
+        except OSError:
+            continue
+        expanded = os.path.expandvars(str(raw))
+        entries.extend(part for part in expanded.split(os.pathsep) if part)
+    return entries
+
+
+def _known_tool_dirs():
+    found = []
+    if sys.platform == "win32":
+        patterns = _WINDOWS_TOOL_GLOBS
+    else:
+        found.extend(_UNIX_TOOL_DIRS)
+        patterns = _UNIX_TOOL_GLOBS
+    for pattern in patterns:
+        expanded = os.path.expandvars(os.path.expanduser(pattern))
+        if any(char in expanded for char in "*?"):
+            found.extend(sorted(glob.glob(expanded)))
+        else:
+            found.append(expanded)
+    return [entry for entry in found if os.path.isdir(entry)]
+
+
+def search_path(refresh=False):
+    """The directories to look for a pipeline tool in, most trusted first."""
+    now = time.monotonic()
+    cached = _PATH_CACHE["value"]
+    if cached is not None and not refresh and now - _PATH_CACHE["taken"] < _PATH_TTL_SECONDS:
+        return cached
+
+    entries = [part for part in os.environ.get("PATH", "").split(os.pathsep) if part]
+    entries.extend(_registry_path() if sys.platform == "win32" else _login_shell_path())
+    entries.extend(_known_tool_dirs())
+
+    ordered, seen = [], set()
+    for entry in entries:
+        key = os.path.normcase(os.path.normpath(entry))
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(entry)
+
+    resolved = os.pathsep.join(ordered)
+    _PATH_CACHE.update({"value": resolved, "taken": now})
+    return resolved
+
+
+def find_tool(name, refresh=False):
+    """Locate one command the way a terminal would, or return None."""
+    return shutil.which(name, path=search_path(refresh=refresh))
+
+
+def tool_environment(refresh=False):
+    """This process's environment with the terminal's PATH in place.
+
+    Anything PRISM spawns that will itself go looking for pdftotext or node
+    needs the widened PATH too, or the health check and the run disagree.
+    """
+    environment = dict(os.environ)
+    environment["PATH"] = search_path(refresh=refresh)
+    return environment
+
+
+# The pipeline needs 3.10 or newer and macOS still ships 3.9, so a "python3"
+# on PATH is interrogated rather than trusted.
+_PYTHON_CANDIDATES = ("python3.13", "python3.12", "python3.11", "python3.10",
+                      "python3", "python")
+_PYTHON_CACHE = {"value": None, "taken": 0.0}
+
+
+def system_python(refresh=False):
+    """The interpreter the pipeline scripts run under, with its version.
+
+    Deliberately not PRISM's own. A build carries a private interpreter that
+    cannot pip install the packages the pipeline needs, and in a frozen build
+    sys.executable is the application itself, so handing either one a script
+    would fail in a way that looks like the script's fault.
+
+    Returns a (path, version) pair, both empty when nothing suitable is here.
+    """
+    now = time.monotonic()
+    cached = _PYTHON_CACHE["value"]
+    if cached is not None and not refresh and now - _PYTHON_CACHE["taken"] < _PATH_TTL_SECONDS:
+        return cached
+
+    # Resolved once: refreshing inside the loop would re-probe the login
+    # shell for every candidate name.
+    where = search_path(refresh=refresh)
+    found = ("", "")
+    for candidate in _PYTHON_CANDIDATES:
+        executable = shutil.which(candidate, path=where)
+        if not executable:
+            continue
+        try:
+            asked = subprocess.run(
+                [executable, "-c", "import sys; print('%d.%d.%d' % sys.version_info[:3])"],
+                capture_output=True, text=True, timeout=6,
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        version = asked.stdout.strip()
+        if asked.returncode != 0 or not re.fullmatch(r"3\.\d+\.\d+", version):
+            continue
+        if tuple(int(part) for part in version.split(".")) >= (3, 10, 0):
+            found = (executable, version)
+            break
+
+    _PYTHON_CACHE.update({"value": found, "taken": now})
+    return found
 
 
 # --------------------------------------------------------------------------

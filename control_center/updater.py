@@ -26,6 +26,11 @@ import urllib.request
 import zipfile
 from pathlib import Path, PurePosixPath
 
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import workspace as ws
+
 
 REPOSITORY = "Bellefeu/Anki-LLM-Optimizer"
 RELEASE_API = f"https://api.github.com/repos/{REPOSITORY}/releases/latest"
@@ -42,6 +47,24 @@ USER_AGENT = "Anki-LLM-Optimizer-Control-Center/1"
 
 class UpdateError(RuntimeError):
     pass
+
+
+def _script_python():
+    """The interpreter to hand a pipeline script.
+
+    From a checkout that is simply the one running this code. Inside a built
+    PRISM, sys.executable is the application binary, so passing a script path
+    to it would launch a second PRISM and time out rather than run the script.
+    """
+    if not ws.frozen():
+        return sys.executable
+    executable = ws.system_python()[0]
+    if not executable:
+        raise UpdateError(
+            "Installing an update needs Python 3.10 or newer, and none was found "
+            "on this machine. Run the guided setup from the Home tab first."
+        )
+    return executable
 
 
 def _emit(callback, message, *, step=None):
@@ -326,9 +349,9 @@ def _run_staged_selftest(staged_root, callback=None):
     _emit(callback, "Running the full test suite in a private staging copy…", step="test")
     try:
         result = subprocess.run(
-            [sys.executable, str(Path(staged_root) / "scripts/selftest.py")],
+            [_script_python(), str(Path(staged_root) / "scripts/selftest.py")],
             cwd=str(Path(staged_root) / "scripts"), capture_output=True, text=True,
-            timeout=420,
+            timeout=420, env=ws.tool_environment(),
         )
     except subprocess.TimeoutExpired as exc:
         raise UpdateError("Staged self-test exceeded seven minutes.") from exc
@@ -452,15 +475,17 @@ def install_update(root, *, release=None, archive=None, staged_directory=None,
                 _atomic_copy(profile_template, root / PROFILE_REL)
 
         regen = subprocess.run(
-            [sys.executable, str(root / "scripts/update_handoff.py")],
+            [_script_python(), str(root / "scripts/update_handoff.py")],
             cwd=str(root / "scripts"), capture_output=True, text=True, timeout=60,
+            env=ws.tool_environment(),
         )
         if regen.returncode != 0:
             raise UpdateError("Handoff regeneration failed:\n" + regen.stderr[-1000:])
 
         check = subprocess.run(
-            [sys.executable, str(root / "scripts/check_version.py")],
+            [_script_python(), str(root / "scripts/check_version.py")],
             cwd=str(root / "scripts"), capture_output=True, text=True, timeout=60,
+            env=ws.tool_environment(),
         )
         if check.returncode != 0:
             raise UpdateError("Installed files do not match VERSION.json:\n" + check.stdout[-1000:])
