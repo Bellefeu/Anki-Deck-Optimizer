@@ -28,7 +28,7 @@
     "control_center/templates/PROFILE.template.md": "3d3433768defa537c8eea70f26b0e9915ed11e9c3456e9b1ada608cdbd9a79ef",
     "control_center/test_control_center.py": "7df0e99c0795fd4f6cf2bf09389a227e4e46aca751ce3423fef4ca1de00256a9",
     "control_center/updater.py": "a7b17fce2deec6747f86e8a0eb419d61f6f9945e5b93b5667a3442acb6a7c0f2",
-    "control_center/workspace.py": "bbf436b44ac631b08eff7b3cb5efe19820562c60906b43c3d80ed3ba2f585285",
+    "control_center/workspace.py": "d79d275d8bb514f20b42e2b487d25d71ef6a577937a3f0ff577a340d1837054d",
     "scripts/PROMPT_auto.md": "6573129f9620ae4c275b7db6d7bc46c3dee05a8b1bd36c2f9d4ea61f32ba3b78",
     "scripts/PROMPT_build.md": "3869fa6675f5a034423a49bfba9ebccc92bffed1ff924850ae9ac6124a56d3d0",
     "scripts/PROMPT_dedupe.md": "ca6ef991fe878f4270be0416b5ec01633dde158a8b95b03f112adc49aee5b584",
