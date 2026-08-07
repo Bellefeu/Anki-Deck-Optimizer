@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / "control_center"), str(ROOT / "scripts"), str(ROOT / "appbuild")]
 
 import build as recipe  # noqa: E402
+import build_manifest  # noqa: E402
 import desktop  # noqa: E402
 import icons  # noqa: E402
 import workspace as ws  # noqa: E402
@@ -57,6 +58,51 @@ class VersionTests(unittest.TestCase):
         self.assertEqual(len(parts), 3, ws.APP_VERSION)
         for part in parts:
             self.assertTrue(part.isdigit(), ws.APP_VERSION)
+
+
+class LineEndingTests(unittest.TestCase):
+    """The manifest is hashed from the working tree. Everything that reads it
+    reads a checkout instead: a clone, a GitHub zipball, or the payload
+    build.py copies out of a runner's checkout. When those disagree the
+    manifest verifies on the machine that built it and nowhere else."""
+
+    def test_normalisation_matches_what_git_writes_on_checkout(self):
+        for data, eol, expected in (
+            (b"a\nb\n", "crlf", b"a\r\nb\r\n"),
+            (b"a\r\nb\r\n", "crlf", b"a\r\nb\r\n"),
+            (b"a\r\nb\r\n", "lf", b"a\nb\n"),
+            (b"a\nb\n", "lf", b"a\nb\n"),
+            # No eol attribute means binary, which must never be touched.
+            (b"\x89PNG\r\n\x1a\n", "", b"\x89PNG\r\n\x1a\n"),
+        ):
+            with self.subTest(eol=eol, data=data):
+                self.assertEqual(build_manifest.checkout_bytes(data, eol), expected)
+
+    def test_the_working_tree_holds_what_a_fresh_checkout_would(self):
+        relatives = [path.relative_to(build_manifest.ROOT).as_posix()
+                     for path in build_manifest.patchable_files()]
+        wrong = build_manifest.unnormalised(relatives)
+        self.assertEqual(
+            wrong, [],
+            "these files would hash differently on every other computer; "
+            "let git rewrite them and build the manifest again",
+        )
+
+    def test_a_file_rewritten_with_the_wrong_endings_is_caught(self):
+        """The specific mistake: a tool writes LF into a path .gitattributes
+        marks crlf, and the manifest is then built from it."""
+        crlf = [name for name in ("PRISM - Windows.cmd", "control_center/install/setup.ps1")
+                if (build_manifest.ROOT / name).is_file()]
+        self.assertTrue(crlf, "no crlf file left to check the guard against")
+        target = crlf[0]
+        original = (build_manifest.ROOT / target).read_bytes()
+        try:
+            (build_manifest.ROOT / target).write_bytes(original.replace(b"\r\n", b"\n"))
+            self.assertEqual(
+                [name for name, _ in build_manifest.unnormalised([target])], [target])
+        finally:
+            (build_manifest.ROOT / target).write_bytes(original)
+        self.assertEqual(build_manifest.unnormalised([target]), [])
 
 
 class PayloadTests(unittest.TestCase):
@@ -770,11 +816,37 @@ class CopyTests(unittest.TestCase):
                 self.assertNotIn("—", text)
                 self.assertNotIn("–", text)
 
+    def test_a_browser_tab_is_told_the_application_exists(self):
+        """Updating the toolkit patches source files into a folder. It cannot
+        turn a launcher script into a Mac app, so someone who updates in place
+        and keeps double clicking the launcher has no way to learn that the
+        application shipped unless the dashboard says so."""
+        page = (ROOT / "control_center/static/index.html").read_text(encoding="utf-8")
+        script = (ROOT / "control_center/static/app.js").read_text(encoding="utf-8")
+        self.assertIn('id="app-offer"', page)
+        self.assertIn('id="app-offer-link"', page)
+        self.assertIn("renderApplicationOffer", script)
+        # Gated on the shell, or the application would advertise itself to
+        # someone already looking at it.
+        self.assertIn('status.shell?.mode !== "desktop"', script)
+        # The address comes from the updater, so there is one place that
+        # knows where releases live.
+        self.assertIn("status.releases_url", script)
+        updater = (ROOT / "control_center/updater.py").read_text(encoding="utf-8")
+        self.assertIn("RELEASES_PAGE", updater)
+        self.assertIn("RELEASES_PAGE", (ROOT / "control_center/app.py").read_text(encoding="utf-8"))
+
     def test_the_retired_name_is_gone_from_every_surface_a_user_sees(self):
         for relative in ("START HERE.md", "README.md",
                          "control_center/static/index.html",
                          "control_center/static/app.js",
-                         "control_center/README.md"):
+                         "control_center/README.md",
+                         # Terminal output is a surface too. These four lines
+                         # kept the retired label for two releases after the
+                         # rename because nothing looked at them.
+                         "PRISM - Mac.command",
+                         "PRISM - Windows.cmd",
+                         "control_center/launch.sh"):
             with self.subTest(relative=relative):
                 text = (ROOT / relative).read_text(encoding="utf-8")
                 self.assertNotIn("Control Center", text)

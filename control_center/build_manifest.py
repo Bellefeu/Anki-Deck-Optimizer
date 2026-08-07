@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 
@@ -51,10 +52,73 @@ def patchable_files():
     return sorted(paths)
 
 
+def eol_attributes(relatives):
+    """The eol attribute git would apply to each path on checkout."""
+    try:
+        asked = subprocess.run(
+            ["git", "check-attr", "eol", "--stdin", "-z"],
+            input="\0".join(relatives), capture_output=True, text=True,
+            cwd=str(ROOT), timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    if asked.returncode != 0:
+        return {}
+    # NUL separated triples: path, attribute, value.
+    fields = asked.stdout.split("\0")
+    return {fields[index]: fields[index + 2]
+            for index in range(0, len(fields) - 2, 3)}
+
+
+def checkout_bytes(data, eol):
+    """``data`` as git would write it into a fresh checkout."""
+    if eol == "crlf":
+        return data.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+    if eol == "lf":
+        return data.replace(b"\r\n", b"\n")
+    return data
+
+
+def unnormalised(relatives):
+    """Files whose working copy is not what a fresh checkout would hold.
+
+    The manifest is hashed from the working tree, but every consumer reads a
+    checkout instead: a clone, a GitHub zipball, or the payload build.py
+    copies out of a runner's checkout. A file edited by a tool that writes
+    LF where .gitattributes says CRLF hashes correctly on the machine that
+    built the manifest and nowhere else, which shows up as an integrity
+    failure on every other computer and never on this one.
+    """
+    attributes = eol_attributes(relatives)
+    wrong = []
+    for relative in relatives:
+        eol = attributes.get(relative, "")
+        if eol not in ("crlf", "lf"):
+            continue
+        data = (ROOT / relative).read_bytes()
+        if data != checkout_bytes(data, eol):
+            wrong.append((relative, eol))
+    return wrong
+
+
 def build(version, requires_setup=False):
+    paths = patchable_files()
+    relatives = [path.relative_to(ROOT).as_posix() for path in paths]
+    wrong = unnormalised(relatives)
+    if wrong:
+        detail = "\n  ".join(f"{name} should be checked out as {eol}"
+                             for name, eol in wrong)
+        raise SystemExit(
+            "These files do not match what git would check out, so a manifest "
+            "built from them would fail on every computer except this one:\n  "
+            + detail
+            + "\n\nLet git rewrite them, then build the manifest again:\n"
+            + "\n".join(f'  rm "{name}" && git checkout -- "{name}"'
+                        for name, _ in wrong)
+        )
     files = {
         path.relative_to(ROOT).as_posix(): digest(path)
-        for path in patchable_files()
+        for path in paths
     }
     manifest = {
         "format": 1,

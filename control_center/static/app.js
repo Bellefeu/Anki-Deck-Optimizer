@@ -729,6 +729,7 @@ async function loadStatus() {
     $("#rail-version").textContent = `PRISM ${data.app_version}`;
     $("#rail-toolkit").textContent = data.version ? `toolkit ${data.version}` : "";
     renderHealth(data.health);
+    renderApplicationOffer(data);
     if (!data.ready) {
       showWelcome(true);
       await loadWorkspaceOptions();
@@ -747,6 +748,27 @@ async function loadStatus() {
   } catch (error) {
     toast(error.message, "error");
   }
+}
+
+/* Shown only in a browser tab. Inside the application window it would be
+   an advertisement for what the reader is already using. */
+const PLATFORM_DOWNLOAD = {
+  darwin: "Get PRISM for Mac",
+  win32: "Get PRISM for Windows",
+  linux: "Get PRISM for Linux",
+};
+
+function renderApplicationOffer(status) {
+  const offer = $("#app-offer");
+  if (!offer) return;
+  const browser = status.shell?.mode !== "desktop";
+  offer.hidden = !browser;
+  if (!browser) return;
+  const link = $("#app-offer-link");
+  link.href = status.releases_url || "#";
+  const platform = String(status.shell?.platform || "");
+  const key = platform.startsWith("linux") ? "linux" : platform;
+  link.textContent = PLATFORM_DOWNLOAD[key] || "Get the application";
 }
 
 function renderHealth(health) {

@@ -29,6 +29,9 @@ from pathlib import Path, PurePosixPath
 
 REPOSITORY = "Bellefeu/Anki-LLM-Optimizer"
 RELEASE_API = f"https://api.github.com/repos/{REPOSITORY}/releases/latest"
+# Where the built applications are. The updater itself never fetches these,
+# it patches source files in place; this is for pointing a person at them.
+RELEASES_PAGE = f"https://github.com/{REPOSITORY}/releases/latest"
 MANIFEST_REL = Path("scripts/UPDATE_MANIFEST.json")
 STATE_REL = Path("scripts/project_state.json")
 PROFILE_REL = Path("PROFILE.md")

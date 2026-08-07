@@ -1675,6 +1675,29 @@ body.needs-workspace .app-shell { display: none; }
 .welcome-status[data-state="done"] { color: var(--mint); }
 
 /* ------------------------------------------------------------------ *
+ * The application offer
+ *
+ * Only ever drawn in a browser tab. Someone who updated the toolkit in
+ * place has no other way to learn that the same dashboard exists as an
+ * application, because a patch of source files cannot turn a launcher
+ * script into one.
+ * ------------------------------------------------------------------ */
+
+.app-offer[hidden] { display: none; }
+.app-offer h2 { margin: 8px 0 10px; }
+.app-offer p { margin: 0 0 22px; max-width: 62ch; color: var(--ink-soft); font-size: 13.5px; line-height: 1.65; }
+.app-offer small { display: block; margin-top: 14px; color: var(--ink-ghost); font-size: 11.5px; }
+
+/* The download is a real link, not a button that calls window.open, so it
+   can be middle clicked and shows where it goes on hover. */
+a.primary-button {
+  display: inline-block;
+  text-decoration: none;
+  line-height: 1.15;
+}
+a.primary-button:hover { transform: translateY(-1px); color: var(--white-hot); }
+
+/* ------------------------------------------------------------------ *
  * Toolkit integrity
  * ------------------------------------------------------------------ */
 
