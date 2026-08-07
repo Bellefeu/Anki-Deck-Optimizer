@@ -377,12 +377,17 @@ class Application:
     def machine_health(self):
         """What the build pipeline needs, which is separate from what PRISM
         itself needs. PRISM carries its own runtime; these are the tools the
-        scripts shell out to once a module is actually being built."""
+        scripts shell out to once a module is actually being built.
+
+        Every lookup goes through ws.find_tool rather than the bare PATH,
+        because a double-clicked application does not inherit the one a
+        terminal builds. See the note above search_path in workspace.py.
+        """
         return {
-            "python": sys.version.split()[0] if not ws.frozen() else _system_python(),
-            "poppler": bool(shutil.which("pdftotext")),
-            "tesseract": bool(shutil.which("tesseract")),
-            "node": bool(shutil.which("node")),
+            "python": _system_python(),
+            "poppler": bool(ws.find_tool("pdftotext")),
+            "tesseract": bool(ws.find_tool("tesseract")),
+            "node": bool(ws.find_tool("node")),
         }
 
     def status(self):
@@ -465,28 +470,16 @@ class Application:
 
 
 def _system_python():
-    """The interpreter the pipeline scripts would run under, not PRISM's own.
+    """The version of the interpreter the pipeline scripts would run under.
 
-    A build carries a private interpreter that cannot pip install the packages
-    the pipeline needs, so reporting that version here would tell the user
-    their machine is ready when it is not.
+    Not PRISM's own. A build carries a private interpreter that cannot pip
+    install the packages the pipeline needs, so reporting its version would
+    tell the user their machine is ready when it is not. A checkout does run
+    under a machine interpreter, but not necessarily one new enough, and
+    macOS still ships 3.9. Asking the same question either way means the
+    application and the browser tab give the same answer.
     """
-    for candidate in ("python3.13", "python3.12", "python3.11", "python3.10", "python3", "python"):
-        executable = shutil.which(candidate)
-        if not executable:
-            continue
-        try:
-            found = subprocess.run(
-                [executable, "-c", "import sys; print('%d.%d.%d' % sys.version_info[:3])"],
-                capture_output=True, text=True, timeout=6,
-            )
-        except (OSError, subprocess.SubprocessError):
-            continue
-        version = found.stdout.strip()
-        if found.returncode == 0 and re.fullmatch(r"3\.\d+\.\d+", version):
-            if tuple(int(part) for part in version.split(".")) >= (3, 10, 0):
-                return version
-    return ""
+    return ws.system_python()[1]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -753,8 +746,18 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def _check_job(self, root, log):
+        # The last line the activity log is left showing is the only record of
+        # how this ended, so the check reports its own answer rather than
+        # stopping on the sentence that describes work still in progress.
         log("Checking the latest stable GitHub release…", step="check")
-        return check_latest(root)
+        result = check_latest(root)
+        if result["available"]:
+            log(f"Version {result['latest']} is available. "
+                f"Version {result['installed']} is installed.", step="done")
+        else:
+            log(f"Version {result['installed']} is the latest stable release. "
+                "Nothing to install.", step="done")
+        return result
 
     def _native_folder_dialog(self, start=None):
         """The window's own folder chooser when there is a window, Tk otherwise."""
