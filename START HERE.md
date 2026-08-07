@@ -19,8 +19,10 @@ Download the file for your computer from the
 [Releases page](https://github.com/Bellefeu/Anki-LLM-Optimizer/releases/latest).
 
 - **Windows:** `PRISM.exe`. Double-click it. Nothing else is required.
-- **Mac:** `PRISM-macOS-AppleSilicon.dmg`, or `PRISM-macOS-Intel.dmg` on a pre-2020 Mac.
-  Open it and drag **PRISM** into your Applications folder.
+- **Mac:** the `.dmg` whose name ends **AppleSilicon** on a 2020 or later Mac, or the one
+  ending **Intel** on an older one. Open it and drag **PRISM** into your Applications
+  folder. If you are not sure which Mac you have, open the **Apple menu** and click
+  **About This Mac**.
 - **Linux:** the `.deb` on Debian or Ubuntu, or the `.tar.gz` anywhere else. The tarball
   has an `install.sh` that adds PRISM to your applications menu for your user only.
 

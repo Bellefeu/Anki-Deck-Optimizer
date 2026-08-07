@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import struct
 import sys
 import tempfile
@@ -576,6 +577,39 @@ class RecipeTests(unittest.TestCase):
         self.assertIs(plist["NSRequiresAquaSystemAppearance"], False)
         self.assertIs(plist["NSHighResolutionCapable"], True)
         self.assertEqual(plist["CFBundleIconFile"], "PRISM.icns")
+
+    def test_the_guide_and_the_release_notes_name_files_a_build_can_emit(self):
+        """A guide that names a download nobody can find is worse than one
+        that names none, and nothing else in the repository would notice."""
+        self.assertEqual(recipe.macos_label("arm64"), "AppleSilicon")
+        self.assertEqual(recipe.macos_label("x86_64"), "Intel")
+
+        guide = (ROOT / "START HERE.md").read_text(encoding="utf-8")
+        notes = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        for label in ("AppleSilicon", "Intel"):
+            with self.subTest(label=label):
+                self.assertIn(label, guide)
+                self.assertIn(f"macOS-{label}.dmg", notes)
+
+        # Anything either surface names outright has to be a name a build can
+        # actually produce. The Windows binary is the only fixed one.
+        for surface, text in (("guide", guide), ("notes", notes)):
+            for named in re.findall(r"`(PRISM[^`]*\.(?:dmg|exe))`", text):
+                with self.subTest(surface=surface, named=named):
+                    self.assertTrue(
+                        named == "PRISM.exe" or named.startswith("PRISM-"),
+                        f"{named} is not a name appbuild/build.py emits",
+                    )
+
+    def test_running_the_release_workflow_by_hand_publishes_nothing(self):
+        """The rehearsal before a tag. If a hand run could publish, the first
+        one would burn a version number on a build nobody had seen yet."""
+        workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("if: startsWith(github.ref, 'refs/tags/v')", workflow)
+        # A declared input that nothing reads reads as a control that works.
+        declared = set(re.findall(r"^      (\w+):\n        description:", workflow, re.M))
+        self.assertEqual(declared, set(), f"unused workflow inputs: {declared}")
 
     def test_architecture_names_are_normalised_for_each_kind_of_package(self):
         for reported, expected in (("AMD64", "x86_64"), ("x86_64", "x86_64"),

@@ -3,12 +3,11 @@ name: Build PRISM
 on:
   push:
     tags: ["v*"]
+  # Running this by hand builds all four targets and uploads them as run
+  # artifacts without publishing anything: the publish job below is gated on a
+  # tag. That is the rehearsal, and it is worth doing before the first tag,
+  # because a tag that fails halfway leaves a version number spent.
   workflow_dispatch:
-    inputs:
-      draft:
-        description: "Publish the release as a draft"
-        type: boolean
-        default: true
 
 permissions:
   contents: write
@@ -164,8 +163,8 @@ jobs:
             | Your computer | Download |
             | --- | --- |
             | Windows | `PRISM.exe` |
-            | Mac, Apple Silicon (2020 and later) | `PRISM-*-macOS-arm64.dmg` |
-            | Mac, Intel | `PRISM-*-macOS-x86_64.dmg` |
+            | Mac, Apple Silicon (2020 and later) | `PRISM-*-macOS-AppleSilicon.dmg` |
+            | Mac, Intel | `PRISM-*-macOS-Intel.dmg` |
             | Debian, Ubuntu | `prism_*_amd64.deb` |
             | Any other Linux | `PRISM-*-linux-x86_64.tar.gz` |
 

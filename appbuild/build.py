@@ -107,6 +107,15 @@ def debian_arch():
     return {"x86_64": "amd64", "arm64": "arm64"}.get(machine(), machine())
 
 
+def macos_label(arch=None):
+    """What Apple's own customers call the two Macs, not what uname does.
+
+    Someone standing in front of a release page knows whether their Mac is
+    Apple Silicon or Intel. Almost nobody knows whether it is arm64.
+    """
+    return {"arm64": "AppleSilicon", "x86_64": "Intel"}.get(arch or machine(), arch or machine())
+
+
 def version():
     return ws.APP_VERSION
 
@@ -293,7 +302,7 @@ def build_dmg(bundle):
     staging.mkdir(parents=True)
     shutil.copytree(bundle, staging / bundle.name, symlinks=True)
     os.symlink("/Applications", staging / "Applications")
-    output = DIST / f"{APP_NAME}-{version()}-macOS-{machine()}.dmg"
+    output = DIST / f"{APP_NAME}-{version()}-macOS-{macos_label()}.dmg"
     output.unlink(missing_ok=True)
     run(["hdiutil", "create", "-volname", APP_NAME, "-srcfolder", str(staging),
          "-ov", "-format", "UDZO", "-quiet", str(output)])
