@@ -873,6 +873,20 @@ def serve(root, port=0, open_browser=True, verbose=False):
         server.server_close()
 
 
+def cli_path(value):
+    """A path as a shell handed it over, with Windows quoting undone.
+
+    ``%~dp0`` in a .cmd file always ends in a backslash, and a backslash in
+    front of the closing quote escapes that quote instead of ending the
+    argument, so ``--root "%~dp0"`` reaches us with a stray quote stuck on the
+    end. The launcher no longer writes it that way, but older copies are still
+    on disk, and a quote is not a character a Windows path can hold anyway.
+    """
+    if value is None or sys.platform != "win32":
+        return value
+    return value.strip().strip('"') or None
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=None,
@@ -882,7 +896,7 @@ def main(argv=None):
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
-    root = args.root
+    root = cli_path(args.root)
     if root is None:
         remembered = ws.remembered_workspace()
         candidate = Path(__file__).resolve().parents[1]

@@ -41,18 +41,22 @@ if errorlevel 1 (
 )
 goto find_python
 
+rem  %~dp0 always ends in a backslash, and a backslash in front of the closing
+rem  quote escapes that quote on the way into the program, so "%~dp0" arrives
+rem  as a path with a stray " stuck on the end. The trailing dot keeps the
+rem  folder we mean and leaves the quote alone.
 :run_py
-py -3 "%~dp0control_center\app.py" --root "%~dp0"
+py -3 "%~dp0control_center\app.py" --root "%~dp0."
 set "CONTROL_EXIT=%errorlevel%"
 goto finished
 
 :run_python
-python "%~dp0control_center\app.py" --root "%~dp0"
+python "%~dp0control_center\app.py" --root "%~dp0."
 set "CONTROL_EXIT=%errorlevel%"
 goto finished
 
 :run_found
-"%PRISM_PY%" "%~dp0control_center\app.py" --root "%~dp0"
+"%PRISM_PY%" "%~dp0control_center\app.py" --root "%~dp0."
 set "CONTROL_EXIT=%errorlevel%"
 
 :finished
