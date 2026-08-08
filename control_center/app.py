@@ -734,12 +734,20 @@ class Handler(BaseHTTPRequestHandler):
         elif action == "repair":
             report = ws.restore_missing(self.app.require_root())
             restored = len(report["restored"])
-            self._json({
-                "ok": True, **report,
-                "message": (f"Restored {restored} missing toolkit "
-                            f"{'file' if restored == 1 else 'files'}."
-                            if restored else "Nothing was missing from the toolkit."),
-            })
+            stale = len(report.get("unavailable") or [])
+            if restored:
+                message = (f"Restored {restored} missing toolkit "
+                           f"{'file' if restored == 1 else 'files'}.")
+            else:
+                message = "Nothing was missing from the toolkit."
+            if stale:
+                # Saying "restored nothing" and stopping would leave someone
+                # looking for a fault in their workspace, when what is old is
+                # the application doing the looking.
+                message += (f" {stale} could not be put back because this PRISM "
+                            "is older than the workspace's toolkit. Download the "
+                            "current PRISM, then repair again.")
+            self._json({"ok": True, **report, "message": message})
         elif action == "inspect":
             self._json({"ok": True, **ws.inspect_workspace(self.app.require_root())})
         else:

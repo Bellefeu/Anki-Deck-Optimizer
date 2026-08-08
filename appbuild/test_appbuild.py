@@ -10,6 +10,7 @@ that assembles them. Freezing itself is proved by the release workflow.
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import os
 import re
@@ -251,6 +252,40 @@ class WorkspaceTests(unittest.TestCase):
             self.assertEqual(result["altered"], ["scripts/cleanup.py"])
             self.assertTrue((created / "scripts/deps.py").is_file())
             self.assertEqual(edited.read_text(encoding="utf-8"), "# mine now\n")
+
+    def test_a_workspace_ahead_of_the_application_is_intact_not_altered(self):
+        """The toolkit updates without the application having to, which is the
+        whole point of the release updater: an installed 1.5.4 goes on looking
+        at a workspace the patcher has taken to 1.5.5. Measured against the
+        copy inside the application, every file that legitimately moved
+        between those two versions came back as one the user had edited, and
+        someone who had done nothing but accept an update was told five
+        toolkit files needed attention."""
+        with tempfile.TemporaryDirectory() as temp, private_home(temp):
+            created = ws.create_workspace((Path(temp) / "PRISM").resolve(), source=ROOT)
+            self.assertEqual(ws.inspect_workspace(created), {"missing": [], "altered": []})
+
+            # The workspace moves on: a toolkit file changes and its own
+            # manifest records the change, exactly as an update leaves things.
+            moved_on = created / "scripts/deps.py"
+            moved_on.write_text("# 1.5.5 of this file\n", encoding="utf-8")
+            manifest_path = created / "scripts/UPDATE_MANIFEST.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["release_version"] = "99.0.0"
+            manifest["files"]["scripts/deps.py"] = hashlib.sha256(
+                moved_on.read_bytes()).hexdigest()
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n",
+                                     encoding="utf-8")
+
+            self.assertEqual(ws.inspect_workspace(created), {"missing": [], "altered": []})
+
+            # And a repair must not hand back the application's older copy.
+            moved_on.unlink()
+            self.assertEqual(ws.inspect_workspace(created)["missing"], ["scripts/deps.py"])
+            result = ws.restore_missing(created)
+            self.assertEqual(result["restored"], [])
+            self.assertEqual(result["unavailable"], ["scripts/deps.py"])
+            self.assertFalse(moved_on.exists())
 
     def test_a_lost_allowlist_is_reported_and_restored(self):
         with tempfile.TemporaryDirectory() as temp, private_home(temp):
