@@ -708,6 +708,31 @@ class WindowsSetupTests(unittest.TestCase):
             with self.subTest(relative=relative):
                 self.assertIn("find-python.ps1", self.script(relative))
 
+    def test_the_folder_the_launcher_names_survives_the_command_line(self):
+        """%~dp0 ends in a backslash, and a backslash in front of the closing
+        quote escapes the quote rather than ending the argument, so
+        --root "%~dp0" reached Python as the project folder with a " on the
+        end. Nothing by that name is a project, so PRISM refused to open the
+        very folder it had just been launched from."""
+        for line in self.script("PRISM - Windows.cmd").splitlines():
+            if "--root" in line:
+                with self.subTest(line=line.strip()):
+                    self.assertNotIn('--root "%~dp0"', line)
+                    self.assertIn('--root "%~dp0."', line)
+
+    def test_a_root_that_arrives_quoted_still_names_the_project(self):
+        """Launchers that predate the fix above stay on people's disks, and an
+        update replaces app.py before they ever run the new .cmd."""
+        # The backslash %~dp0 ends in is eaten as the escape; the quote it was
+        # supposed to close arrives in its place.
+        quoted = f'{ROOT}"'
+        with mock.patch.object(app.sys, "platform", "win32"):
+            self.assertEqual(app.cli_path(quoted), str(ROOT))
+            self.assertIsNone(app.cli_path(None))
+            self.assertIsNone(app.cli_path('  "  '))
+        with mock.patch.object(app.sys, "platform", "darwin"):
+            self.assertEqual(app.cli_path(quoted), quoted)
+
     def test_a_winget_exit_code_is_not_the_verdict_on_a_package(self):
         """winget answers 'already installed, nothing newer' with a non-zero
         code. Throwing on that abandoned every package after the first."""
