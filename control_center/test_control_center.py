@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import ssl
+import subprocess
 import sys
 import tempfile
 import threading
@@ -677,6 +678,135 @@ class ToolLookupTests(unittest.TestCase):
             with mock.patch.object(workspace, "system_python", return_value=("", "")):
                 with self.assertRaises(updater.UpdateError):
                     updater._script_python()
+
+
+WINDOWS_SCRIPTS = (
+    "control_center/install/setup.ps1",
+    "control_center/install/find-python.ps1",
+)
+
+
+class WindowsSetupTests(unittest.TestCase):
+    """Getting a Windows machine from nothing to a running PRISM.
+
+    Every line of this path is PowerShell and batch, so a Windows runner is
+    the only place it can be run at all. The tests that need one say so and
+    skip elsewhere; the rest read the scripts, which is worth doing anywhere.
+    """
+
+    def script(self, relative):
+        return (ROOT / relative).read_text(encoding="utf-8")
+
+    def test_installed_and_on_the_path_are_asked_as_separate_questions(self):
+        """The bug this replaced: Windows leaves 'Add python.exe to PATH'
+        unticked, winget then refuses to install a Python it can see is
+        already there, and a launcher that only knows how to ask the PATH
+        sends someone round that loop forever."""
+        finder = ROOT / "control_center/install/find-python.ps1"
+        self.assertTrue(finder.is_file())
+        for relative in ("PRISM - Windows.cmd", "control_center/install/setup.ps1"):
+            with self.subTest(relative=relative):
+                self.assertIn("find-python.ps1", self.script(relative))
+
+    def test_a_winget_exit_code_is_not_the_verdict_on_a_package(self):
+        """winget answers 'already installed, nothing newer' with a non-zero
+        code. Throwing on that abandoned every package after the first."""
+        setup = self.script("control_center/install/setup.ps1")
+        self.assertNotIn("throw", setup)
+        # What replaced it: look for the tool itself once winget has run.
+        self.assertIn("Update-EnvironmentPath", setup)
+
+    def test_the_probe_sent_to_an_interpreter_carries_no_quotes(self):
+        """Windows PowerShell does not escape a double quote inside an
+        argument on its way to a native program, so a probe written the
+        readable way reaches Python stripped of them and raises SyntaxError.
+        Every interpreter on the machine fails identically, and the machine
+        reports that it has no Python. That is what shipped."""
+        for line in self.script("control_center/install/find-python.ps1").splitlines():
+            if line.startswith("$Probe"):
+                self.assertNotIn('"', line)
+                self.assertIn("chr(10)", line, "the separator has to come from somewhere")
+                break
+        else:
+            self.fail("no $Probe assignment to check")
+
+    @unittest.skipUnless(sys.platform == "win32", "PowerShell parser")
+    def test_every_powershell_script_parses(self):
+        for relative in WINDOWS_SCRIPTS:
+            with self.subTest(relative=relative):
+                # The path goes into the command text rather than alongside it:
+                # -Command appends anything that follows to the command itself,
+                # so an argument passed that way never reaches $args and the
+                # parser is handed nothing.
+                literal = "'" + str(ROOT / relative).replace("'", "''") + "'"
+                checked = subprocess.run(
+                    ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                     "-Command",
+                     "$e = $null; "
+                     "[System.Management.Automation.Language.Parser]::ParseFile("
+                     f"{literal}, [ref]$null, [ref]$e) > $null; "
+                     "if ($e) { $e | ForEach-Object { Write-Output $_.ToString() }; "
+                     "exit 1 } else { exit 0 }"],
+                    capture_output=True, text=True, timeout=120,
+                )
+                self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+
+    @unittest.skipUnless(sys.platform == "win32", "the finder is Windows only")
+    def test_the_finder_reports_an_interpreter_that_runs(self):
+        found = self.run_finder(os.environ.copy())
+        self.assertIsNotNone(
+            found,
+            "this runner has a Python and it was not found. The script said: "
+            + (self.reported or "nothing at all"))
+        self.assertGreaterEqual(self.version_of(found), (3, 10))
+
+    @unittest.skipUnless(sys.platform == "win32", "the finder is Windows only")
+    def test_the_finder_still_answers_when_the_path_holds_no_python(self):
+        """The registry and install directory branches, which are the whole
+        reason the file exists and the ones a PATH lookup never reaches. What
+        this runner has installed decides whether they find anything, so the
+        assertion is that they run cleanly and do not lie about what they
+        found, not that a bare machine must produce an interpreter."""
+        environment = os.environ.copy()
+        system = Path(os.environ.get("SystemRoot", r"C:\Windows"))
+        environment["PATH"] = os.pathsep.join(
+            [str(system / "System32"), str(system),
+             str(system / "System32/WindowsPowerShell/v1.0")])
+        found = self.run_finder(environment)
+        if found is not None:
+            self.assertGreaterEqual(self.version_of(found), (3, 10))
+
+    def run_finder(self, environment):
+        """The path the finder printed, or None when it found nothing.
+
+        Always asked with -Explain, for two reasons: "found nothing" and "fell
+        over" leave the same empty stdout behind and only one of them is an
+        answer, and running with it proves that all that talking stays off the
+        stdout the callers read.
+        """
+        asked = subprocess.run(
+            ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+             str(ROOT / "control_center/install/find-python.ps1"), "-Explain"],
+            capture_output=True, text=True, timeout=180, env=environment,
+        )
+        self.reported = asked.stderr.strip()
+        self.assertIn(asked.returncode, (0, 1), self.reported)
+        if asked.returncode != 0:
+            return None
+        found = asked.stdout.strip()
+        self.assertTrue(found, "exit 0 promises a path on stdout")
+        self.assertTrue(Path(found).is_file(), found)
+        return found
+
+    def version_of(self, interpreter):
+        reported = subprocess.run(
+            [interpreter, "-c",
+             "import sys; print('%d.%d' % sys.version_info[:2])"],
+            capture_output=True, text=True, timeout=120,
+        )
+        self.assertEqual(reported.returncode, 0, reported.stderr)
+        major, _, minor = reported.stdout.strip().partition(".")
+        return (int(major), int(minor))
 
 
 class NetworkTrustTests(unittest.TestCase):

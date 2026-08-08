@@ -160,6 +160,9 @@ Useful details:
   `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
 - If a newly installed tool still looks missing, close the terminal, open a new one, and
   run setup again so the new shell sees the updated PATH.
+- On Windows, Python is often installed without being added to PATH. Setup looks in the
+  registry and the usual install folders too, so this is normally invisible. To see what
+  it found and where, run `.\control_center\install\find-python.ps1 -Explain`.
 - The commands below use `python3`. On Windows, use `py` if `python3` is unavailable.
 
 ### 3. Confirm READY
