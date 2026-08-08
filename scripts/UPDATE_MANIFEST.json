@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "release_version": "1.5.3",
+  "release_version": "1.5.4",
   "state_schema": 1,
   "requires_setup": false,
   "files": {
@@ -29,7 +29,7 @@
     "control_center/templates/PROFILE.template.md": "3d3433768defa537c8eea70f26b0e9915ed11e9c3456e9b1ada608cdbd9a79ef",
     "control_center/test_control_center.py": "a635f5fb2877f9fb560b2b1948522df13798590efc2e79df03ae7959c48c9caf",
     "control_center/updater.py": "c5e6f02a949e35c93b1fe37913d832c74bc6df4d094614a20a7ede3e7d64e5f1",
-    "control_center/workspace.py": "ba612040418c4f0e6f79fa9919d26a2ec346dfb31356b06560edf13ebc29aee5",
+    "control_center/workspace.py": "42ded6c9859d7414e72713d637e1341d6c0992d3bd5d999c2d906835ba81f172",
     "scripts/PROMPT_auto.md": "6573129f9620ae4c275b7db6d7bc46c3dee05a8b1bd36c2f9d4ea61f32ba3b78",
     "scripts/PROMPT_build.md": "3869fa6675f5a034423a49bfba9ebccc92bffed1ff924850ae9ac6124a56d3d0",
     "scripts/PROMPT_dedupe.md": "ca6ef991fe878f4270be0416b5ec01633dde158a8b95b03f112adc49aee5b584",

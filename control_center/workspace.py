@@ -36,7 +36,7 @@ from pathlib import Path
 # can carry a workspace's toolkit forward without anyone downloading a new
 # application, so an installed PRISM 1.5.0 may quite correctly be looking at a
 # 1.6.0 workspace. Both numbers are shown, which is why there are two.
-APP_VERSION = "1.5.3"
+APP_VERSION = "1.5.4"
 
 CONFIG_VERSION = 1
 MANIFEST_REL = "scripts/UPDATE_MANIFEST.json"
