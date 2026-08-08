@@ -36,7 +36,7 @@ from pathlib import Path
 # can carry a workspace's toolkit forward without anyone downloading a new
 # application, so an installed PRISM 1.5.0 may quite correctly be looking at a
 # 1.6.0 workspace. Both numbers are shown, which is why there are two.
-APP_VERSION = "1.5.5"
+APP_VERSION = "1.5.6"
 
 CONFIG_VERSION = 1
 MANIFEST_REL = "scripts/UPDATE_MANIFEST.json"
@@ -705,11 +705,29 @@ def _mark_executable(root):
 
 
 def inspect_workspace(root):
-    """What is missing or edited in an existing workspace, against the payload."""
+    """What is missing or edited in an existing workspace, against its own manifest.
+
+    Against its own, not against the copy inside this PRISM. The toolkit
+    updates on its own schedule and deliberately so - APP_VERSION above says
+    an installed 1.5.0 may quite correctly be looking at a 1.6.0 workspace -
+    and measuring a workspace against an older application turns every file
+    that legitimately moved between the two versions into a report that the
+    user edited it. Someone who had done nothing but accept an update was
+    told five toolkit files needed attention.
+
+    What this question means is "is this workspace still what was installed
+    here", and the manifest installed alongside it is what knows that.
+    """
     root = Path(root)
     if not is_workspace(root):
         raise WorkspaceError(f"{root} is not a PRISM workspace.")
-    expected = payload_files()
+    try:
+        expected = payload_files(root)
+    except WorkspaceError:
+        # A workspace from before the manifest existed has nothing of its own
+        # to be measured against, so the application's copy is still the best
+        # available answer.
+        expected = payload_files()
     missing, altered = [], []
     for relative, digest in expected.items():
         candidate = root / relative
@@ -731,10 +749,22 @@ def restore_missing(root, *, callback=None):
     root = Path(root)
     report = inspect_workspace(root)
     source = payload_root()
-    restored = []
+    try:
+        expected = payload_files(root)
+    except WorkspaceError:
+        expected = payload_files()
+    restored, unavailable = [], []
     for relative in report["missing"]:
         origin = source / relative
         if not origin.is_file():
+            continue
+        digest = expected.get(relative)
+        if digest and sha256_file(origin) != digest:
+            # This PRISM is older than the workspace it is looking at, so the
+            # copy it carries is not the file that belongs here. Putting it
+            # back would quietly downgrade the toolkit to the application's
+            # version, which is the one thing a repair must never do.
+            unavailable.append(relative)
             continue
         target = root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -746,4 +776,5 @@ def restore_missing(root, *, callback=None):
         (root / folder).mkdir(parents=True, exist_ok=True)
     if restored:
         _mark_executable(root)
-    return {"restored": sorted(restored), "altered": report["altered"]}
+    return {"restored": sorted(restored), "altered": report["altered"],
+            "unavailable": sorted(unavailable)}

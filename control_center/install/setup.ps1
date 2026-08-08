@@ -90,6 +90,34 @@ function Install-Package([string]$id) {
     }
 }
 
+# The same directories workspace.py::_WINDOWS_TOOL_GLOBS searches, because a
+# tool is installed or it is not, and the two must never disagree about it.
+$ToolDirs = @(
+    "$env:LOCALAPPDATA\Microsoft\WinGet\Links",
+    "$env:PROGRAMFILES\nodejs",
+    "$env:PROGRAMFILES\Tesseract-OCR"
+)
+
+function Resolve-Tool([string]$name) {
+    <#
+      Get-Command asks the PATH and nothing else. The tesseract installer no
+      more ticks the PATH box than Python's does, so a machine that had just
+      installed it was told it was missing, offered it again, and sent round
+      to winget to be told there was nothing to do. bootstrap.py, which looks
+      in these directories, then declared the same machine ready.
+    #>
+    $found = Get-Command $name -ErrorAction SilentlyContinue
+    if ($found) { return $found.Source }
+    foreach ($dir in $ToolDirs) {
+        if (-not (Test-Path $dir)) { continue }
+        foreach ($ext in @('.exe', '.bat', '.cmd', '')) {
+            $candidate = Join-Path $dir "$name$ext"
+            if (Test-Path $candidate -PathType Leaf) { return $candidate }
+        }
+    }
+    return $null
+}
+
 $Tools = @('pdftotext', 'pdftoppm', 'pdfinfo', 'pdfimages', 'tesseract', 'node')
 $Provides = @{
     'pdftotext' = 'oschwartz10612.Poppler'; 'pdftoppm' = 'oschwartz10612.Poppler'
@@ -119,7 +147,8 @@ if ($py) { Ok $py } else { Miss "not found"; $pkgs += 'Python.Python.3.12' }
 # ---- system tools
 Bold "2. System tools"
 foreach ($t in $Tools) {
-    if (Get-Command $t -ErrorAction SilentlyContinue) { Ok $t }
+    $where = Resolve-Tool $t
+    if ($where) { Ok $t }
     else { Miss "$t  (from $($Provides[$t]))"; $pkgs += $Provides[$t] }
 }
 $pkgs = $pkgs | Select-Object -Unique
@@ -145,8 +174,8 @@ if (-not $py) { $py = Find-Python }
 if ($py) { Ok $py } else { Bad "Python 3.10+" }
 $missing = @()
 foreach ($t in $Tools) {
-    if (Get-Command $t -ErrorAction SilentlyContinue) { Ok $t }
-    else { Miss $t; $missing += $t }
+    $where = Resolve-Tool $t
+    if ($where) { Ok $where } else { Miss $t; $missing += $t }
 }
 if ($missing -and -not $DryRun) {
     Write-Host ""
