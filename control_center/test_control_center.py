@@ -29,6 +29,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "control_center"))
 
 import app
+import deps
 import state_io
 import updater
 import workspace
@@ -661,6 +662,39 @@ class ToolLookupTests(unittest.TestCase):
         environment = workspace.tool_environment(refresh=True)
         self.assertEqual(environment["PATH"], workspace.search_path())
 
+    def test_the_toolkit_scripts_get_that_wider_search_as_well(self):
+        """The half this class did not cover. The Home tab's chips went green
+        while bootstrap, asking shutil.which about the same machine, called
+        the toolchain missing and refused to run: guided setup installs
+        tesseract into Program Files and never touches PATH. deps widens the
+        PATH rather than returning it, so the check and the bare
+        subprocess.run(["tesseract", ...]) extract_source makes later both
+        resolve to the copy that is actually there."""
+        with tempfile.TemporaryDirectory() as temp:
+            installed = Path(temp) / "bin"
+            installed.mkdir()
+            name = "prism-deps-probe"
+            if sys.platform == "win32":
+                tool = installed / f"{name}.bat"
+                tool.write_text("@echo off\r\n", encoding="utf-8")
+            else:
+                tool = installed / name
+                tool.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+                tool.chmod(0o755)
+            inherited = Path(temp) / "empty"
+            inherited.mkdir()
+
+            deps._PATH_WIDENED.clear()
+            self.addCleanup(deps._PATH_WIDENED.clear)
+            with mock.patch.dict(os.environ, {"PATH": str(inherited)}), \
+                 mock.patch.object(workspace, "search_path",
+                                   return_value=str(installed)):
+                self.assertIsNone(shutil.which(name))
+                deps.widen_path()
+                found = shutil.which(name)
+            self.assertIsNotNone(found)
+            self.assertTrue(os.path.samefile(found, tool))
+
     @unittest.skipIf(sys.platform == "win32", "posix login shell probe")
     def test_the_login_shell_is_asked_what_a_terminal_would_have(self):
         with mock.patch.dict(os.environ, {"SHELL": "/bin/sh"}):
@@ -1021,7 +1055,10 @@ class UpdateCheckTests(unittest.TestCase):
 
 
 PIPELINE_TOOLS = ("pdftotext", "pdftoppm", "pdfinfo", "pdfimages", "tesseract")
-MISSING_TOOLS = [name for name in PIPELINE_TOOLS if not shutil.which(name)]
+# Asked the way the toolkit itself asks. shutil.which alone skipped both tests
+# below on any machine whose tesseract was installed but off the PATH, which is
+# every Windows machine that has been through guided setup.
+MISSING_TOOLS = [name for name in PIPELINE_TOOLS if not workspace.find_tool(name)]
 
 
 @unittest.skipIf(
