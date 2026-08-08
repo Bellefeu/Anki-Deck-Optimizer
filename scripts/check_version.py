@@ -45,7 +45,12 @@ def write():
     # version = hash of all the hashes, so any change bumps it
     joined = "".join(f"{k}:{v}" for k, v in sorted(man["files"].items()))
     man["version"] = hashlib.sha256(joined.encode()).hexdigest()[:12]
-    json.dump(man, open(MANIFEST, "w"), indent=1)
+    # newline="" so the \n json.dump writes stays a \n. Windows would
+    # translate it to \r\n, and .gitattributes checks this file out as LF on
+    # every machine, so a manifest written here would hash differently
+    # everywhere else - which is exactly what this file exists to detect.
+    with open(MANIFEST, "w", encoding="utf-8", newline="") as handle:
+        json.dump(man, handle, indent=1)
     print(f"VERSION.json written - pipeline version {man['version']}")
     print(f"  {sum(1 for v in man['files'].values() if v)}/{len(TRACKED)} files present")
     return man

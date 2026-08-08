@@ -1,7 +1,7 @@
 {
- "version": "d9fb3c0f2169",
+ "version": "a602bcd0ab66",
  "files": {
-  "deps.py": "4c25e0a040c89566",
+  "deps.py": "2c2d6f1a4b137133",
   "bootstrap.py": "6a35443a546f0110",
   "build_queue.py": "adb434a6aeb3c88b",
   "extract_source.py": "bb142334037ad3d1",
@@ -12,7 +12,7 @@
   "find_duplicates.py": "c03cf5294279d017",
   "cleanup.py": "044aba16850e3b53",
   "archive_inputs.py": "a67d160e7419d054",
-  "selftest.py": "7661167253c7ecbc",
+  "selftest.py": "00d7f63385911dfe",
   "check_consistency.py": "6407726fdc2b5cb3",
   "handoff.py": "46f4e2bb1e12e178",
   "deck_digest.py": "d1f194c49ee43cbb",
@@ -26,7 +26,7 @@
   "PROMPT_auto.md": "6573129f9620ae4c",
   "next_action.py": "f543ce15411977f7",
   "state_io.py": "00e312281b616de8",
-  "check_version.py": "0a614f14d89bcdd1",
+  "check_version.py": "ca14a0f860a8f923",
   "project_state.template.json": "e62871ebd3272337"
  }
 }

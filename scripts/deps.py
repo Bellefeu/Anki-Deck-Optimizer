@@ -10,7 +10,8 @@ handle itself.
     require("zstandard", "PIL", cli=["pdftotext"])
 """
 
-import importlib, shutil, subprocess, sys
+import importlib, os, shutil, subprocess, sys
+from pathlib import Path
 
 # import name -> pip name, where they differ
 PIP_NAME = {
@@ -48,9 +49,49 @@ def _pip_install(pkg):
     return False
 
 
+_PATH_WIDENED = []
+
+
+def widen_path():
+    """Put the directories PRISM searches onto this process's PATH.
+
+    Installed and on the PATH are different questions, and only the second one
+    is what a bare shutil.which can ask. The tesseract installer on Windows
+    does not tick the PATH box, so a machine that has just been through guided
+    setup has C:\\Program Files\\Tesseract-OCR\\tesseract.exe sitting there
+    while every script here reports the toolchain missing and refuses to run.
+    The dashboard already knew better: workspace.find_tool searches the
+    registry and the install directories too, which is why its health panel
+    disagreed with bootstrap on the same machine.
+
+    So the answer comes from workspace.py rather than from a second list that
+    would drift out of step with it. Widening PATH rather than returning it
+    fixes both halves at once: the checks below see the tool, and so does
+    every subprocess.run(["tesseract", ...]) the pipeline makes later.
+    """
+    if _PATH_WIDENED:
+        return _PATH_WIDENED[0]
+    widened = os.environ.get("PATH", "")
+    control_center = Path(__file__).resolve().parents[1] / "control_center"
+    if control_center.is_dir():
+        try:
+            sys.path.insert(0, str(control_center))
+            import workspace
+            widened = workspace.search_path()
+            os.environ["PATH"] = widened
+        except Exception:
+            # A workspace without the dashboard beside it still works; it just
+            # gets the narrower answer it would have had anyway.
+            pass
+    _PATH_WIDENED.append(widened)
+    return widened
+
+
 def require(*modules, cli=None, quiet=False):
     """Ensure Python modules and CLI tools are available. Installs what it can."""
     missing_fatal = []
+    if cli:
+        widen_path()
 
     for mod in modules:
         try:

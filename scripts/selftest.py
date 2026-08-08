@@ -40,6 +40,12 @@ def run_isolated():
                 print("SELFTEST ISOLATION FAILED: project_state template is missing")
                 return 1
             shutil.copy2(template, state)
+        # Widened out here, where control_center is still a sibling to ask.
+        # The copy above is scripts/ alone, so the child cannot work out for
+        # itself where Windows put tesseract; inheriting the answer is the
+        # only way it sees a toolchain this machine really does have.
+        from deps import widen_path
+        widen_path()
         env = dict(os.environ, ANKI_SELFTEST_ISOLATED="1")
         result = subprocess.run(
             [sys.executable, os.path.join(scripts, "selftest.py")],
@@ -1020,8 +1026,14 @@ def coverage_gate_tests():
 
         # --- the extracted TEXT must be unaffected by any of this. If this ever
         # fails, the optimisation changed the content and must be reverted.
+        # Decoded the way ocr_page decodes its file, because tesseract writes
+        # UTF-8 either way. text=True decodes with the locale encoding instead,
+        # which is UTF-8 on macOS and Linux and cp1252 on Windows: every smart
+        # quote came back as three characters there, and this check failed on
+        # a page the pipeline had read perfectly.
         direct = subprocess.run(["tesseract", src, "-", "--psm", "1"],
-                                capture_output=True, text=True).stdout
+                                capture_output=True,
+                                encoding="utf-8", errors="replace").stdout
         check("OCR text is byte-identical to the pre-coverage pipeline",
               text == direct, f"{len(text)} vs {len(direct)} bytes")
     finally:
