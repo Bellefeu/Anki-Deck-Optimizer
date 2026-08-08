@@ -24,6 +24,11 @@
 param([switch]$DryRun, [switch]$Yes)
 
 $ErrorActionPreference = 'Stop'
+# Under pwsh 7.3 and later this would turn every non-zero exit code from a
+# native command into a terminating error, and winget's exit codes are not
+# failures in the sense that means. This script decides for itself which ones
+# matter, a few lines further down.
+$PSNativeCommandUseErrorActionPreference = $false
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 Set-Location -Path $ProjectRoot
 
@@ -32,13 +37,7 @@ function Ok($m)   { Write-Host "  ok    $m" -ForegroundColor Green }
 function Miss($m) { Write-Host "  miss  $m" -ForegroundColor Yellow }
 function Bad($m)  { Write-Host "  FAIL  $m" -ForegroundColor Red }
 function Cmd($m)  { Write-Host "  $ $m" -ForegroundColor Cyan }
-
-function Invoke-Step([string]$exe, [string[]]$argv) {
-    Cmd "$exe $($argv -join ' ')"
-    if ($DryRun) { return }
-    & $exe @argv
-    if ($LASTEXITCODE -ne 0) { throw "command failed: $exe $($argv -join ' ')" }
-}
+function Note($m) { Write-Host "  $m" -ForegroundColor DarkGray }
 
 function Confirm-Step([string]$msg) {
     if ($Yes -or $DryRun) { return $true }
@@ -46,16 +45,56 @@ function Confirm-Step([string]$msg) {
     return ($r -eq '' -or $r -match '^(y|yes)$')
 }
 
+function Update-EnvironmentPath {
+    <# Take up the PATH that installers have been writing to while this ran.
+
+    A process is handed its environment once, at the moment it starts, so
+    everything winget added a minute ago is invisible to the very checks below
+    that are about to look for it. The registry holds the real thing. #>
+    $parts = @([Environment]::GetEnvironmentVariable('Path', 'Machine'),
+               [Environment]::GetEnvironmentVariable('Path', 'User')) |
+             Where-Object { $_ }
+    if ($parts) { $env:PATH = $parts -join ';' }
+}
+
 function Find-Python {
-    foreach ($c in @('python3.13','python3.12','python3.11','python3.10','python3','python','py')) {
-        $exe = Get-Command $c -ErrorAction SilentlyContinue
-        if (-not $exe) { continue }
-        try {
-            $v = & $c -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>$null
-            if ($v -match '^3\.(\d+)$' -and [int]$Matches[1] -ge 10) { return $c }
-        } catch { }
-    }
+    <# The path of a usable interpreter, or $null.
+
+    Delegated so that this script and the PRISM launcher cannot drift apart on
+    the question of what counts as an installed Python; see find-python.ps1
+    for why the answer is more than a PATH lookup. #>
+    $finder = Join-Path $PSScriptRoot 'find-python.ps1'
+    if (-not (Test-Path -LiteralPath $finder)) { return $null }
+    $found = & $finder
+    if ($LASTEXITCODE -ne 0) { return $null }
+    $found = (@($found) -join '').Trim()
+    if ($found) { return $found }
     return $null
+}
+
+function Install-Package([string]$id) {
+    <# Ask winget for one package, and do not read its exit code as a verdict.
+
+    "Found an existing package already installed ... No available upgrade
+    found" is reported as a failure, and it is the opposite of one: the thing
+    this script wanted is on the machine. Rather than keep a table of which
+    winget codes are benign, the check that matters happens afterwards, by
+    looking for the tool itself. #>
+    $argv = @('install', '--id', $id, '-e', '--silent',
+              '--accept-package-agreements', '--accept-source-agreements')
+    Cmd "winget $($argv -join ' ')"
+    if ($DryRun) { return }
+    & winget @argv
+    if ($LASTEXITCODE -ne 0) {
+        Note "winget exited $LASTEXITCODE. Whether that mattered is checked below."
+    }
+}
+
+$Tools = @('pdftotext', 'pdftoppm', 'pdfinfo', 'pdfimages', 'tesseract', 'node')
+$Provides = @{
+    'pdftotext' = 'oschwartz10612.Poppler'; 'pdftoppm' = 'oschwartz10612.Poppler'
+    'pdfinfo'   = 'oschwartz10612.Poppler'; 'pdfimages' = 'oschwartz10612.Poppler'
+    'tesseract' = 'UB-Mannheim.TesseractOCR'; 'node' = 'OpenJS.NodeJS.LTS'
 }
 
 Bold "=== ANKI DECK OPTIMIZATION - SETUP ==="
@@ -75,18 +114,13 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
 Bold "1. Python 3.10+"
 $py = Find-Python
 $pkgs = @()
-if ($py) { Ok "$py" } else { Miss "not found"; $pkgs += 'Python.Python.3.12' }
+if ($py) { Ok $py } else { Miss "not found"; $pkgs += 'Python.Python.3.12' }
 
 # ---- system tools
 Bold "2. System tools"
-$provides = @{
-    'pdftotext' = 'oschwartz10612.Poppler'; 'pdftoppm' = 'oschwartz10612.Poppler'
-    'pdfinfo'   = 'oschwartz10612.Poppler'; 'pdfimages' = 'oschwartz10612.Poppler'
-    'tesseract' = 'UB-Mannheim.TesseractOCR'; 'node' = 'OpenJS.NodeJS.LTS'
-}
-foreach ($t in @('pdftotext','pdftoppm','pdfinfo','pdfimages','tesseract','node')) {
+foreach ($t in $Tools) {
     if (Get-Command $t -ErrorAction SilentlyContinue) { Ok $t }
-    else { Miss "$t  (from $($provides[$t]))"; $pkgs += $provides[$t] }
+    else { Miss "$t  (from $($Provides[$t]))"; $pkgs += $Provides[$t] }
 }
 $pkgs = $pkgs | Select-Object -Unique
 
@@ -97,28 +131,48 @@ if ($pkgs.Count -eq 0) {
     Write-Host ""
     Bold "3. Installing what is missing"
     if (-not (Confirm-Step "Install with winget: $($pkgs -join ', ')")) { Bad "declined"; exit 1 }
-    foreach ($p in $pkgs) {
-        Invoke-Step 'winget' @('install','--id',$p,'-e','--silent',
-                               '--accept-package-agreements','--accept-source-agreements')
-    }
+    # Every package is attempted. One of them being already present, or even
+    # genuinely failing, is not a reason to leave the rest uninstalled.
+    foreach ($p in $pkgs) { Install-Package $p }
+    Update-EnvironmentPath
+}
+
+# ---- what the machine has now. Worth doing even when nothing was installed,
+#      because the answer above came from a PATH that may since have grown.
+Write-Host ""
+Bold "4. Where that leaves things"
+if (-not $py) { $py = Find-Python }
+if ($py) { Ok $py } else { Bad "Python 3.10+" }
+$missing = @()
+foreach ($t in $Tools) {
+    if (Get-Command $t -ErrorAction SilentlyContinue) { Ok $t }
+    else { Miss $t; $missing += $t }
+}
+if ($missing -and -not $DryRun) {
     Write-Host ""
-    Write-Host "  Note: winget adds these to PATH, but an already-open terminal will not" -ForegroundColor Yellow
-    Write-Host "  see them. If the next step says something is still missing, CLOSE this" -ForegroundColor Yellow
-    Write-Host "  window. Close it, then open Prism again." -ForegroundColor Yellow
-    if (-not $py) { $py = Find-Python }
+    Write-Host "  Still missing: $($missing -join ', ')" -ForegroundColor Yellow
+    Write-Host "  If winget installed these just now, CLOSE this window and open" -ForegroundColor Yellow
+    Write-Host "  PRISM again, so the new window is given the wider PATH." -ForegroundColor Yellow
 }
 
 # ---- hand off
 Write-Host ""
-Bold "4. Handing over to bootstrap.py"
+Bold "5. Handing over to bootstrap.py"
 if ($DryRun) {
     Cmd "$(if ($py) { $py } else { 'python3' }) scripts\bootstrap.py"
     Write-Host ""; Write-Host "  (dry run - stopping here)"
     exit 0
 }
 if (-not $py) {
-    Bad "Python 3.10+ still not on PATH."
-    Write-Host "     Close this window, then open Prism again."
+    Bad "No Python 3.10+ on this computer that setup can find."
+    Write-Host ""
+    Write-Host "  Everywhere it looked, and what it found there:"
+    # Writes its reasons straight to stderr, so they arrive in this window
+    # while stdout, which would be the answer, stays empty.
+    & (Join-Path $PSScriptRoot 'find-python.ps1') -Explain | Out-Null
+    Write-Host ""
+    Write-Host "     Install it from https://www.python.org/downloads/windows/ and tick"
+    Write-Host "     'Add python.exe to PATH', then open PRISM again."
     exit 1
 }
 Write-Host ""
